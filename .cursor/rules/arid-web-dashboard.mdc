@@ -1,0 +1,17 @@
+---
+description: A.R.I.D. web dashboard — online monitoring tool, read-only on field data
+globs: dashboard/**/*.{ts,tsx,css,json},firebase/**
+alwaysApply: false
+---
+
+# A.R.I.D. Web Dashboard Rules
+
+The dashboard is an LGU/health-worker monitoring tool. It expects an internet connection.
+
+1. Never write classification, GPS, risk level, points, or syncStatus. Those are produced only by the mobile app.
+2. The only allowed dashboard write is the lightweight `reviewStatus` / `reviewedAt` / `reviewedBy` fields on an existing report.
+3. Only display reports that are already in Firestore (synced). Never invent or recompute risk levels.
+4. Use Firestore `onSnapshot` listeners for live updates — no manual refresh as the primary data path.
+5. Same color tokens as mobile (`#4A7A8C`, `#6B9080`, risk red/yellow/green). Risk colors are for markers, badges, and hotspot fills only.
+6. Keep this a monitoring complement to the mobile app, not a second capture/classification app.
+7. Report photos are Cloudinary URLs on Firestore documents. Do not add Firebase Storage.

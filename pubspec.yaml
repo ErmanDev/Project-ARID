@@ -1,0 +1,48 @@
+name: arid
+description: "Autonomous Risk Identification and Distribution Mapping of Dengue Vector Breeding Sites"
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flutter_riverpod: ^2.6.1
+  isar_community: ^3.3.2
+  isar_community_flutter_libs: ^3.3.2
+  path_provider: ^2.1.5
+  path: ^1.9.1
+  uuid: ^4.5.1
+  geolocator: ^14.0.2
+  permission_handler: ^12.0.1
+  image_picker: ^1.2.0
+  tflite_flutter: ^0.12.1
+  image: ^4.5.4
+  flutter_map: ^8.2.2
+  latlong2: ^0.9.1
+  connectivity_plus: ^7.0.0
+  workmanager: ^0.9.0
+  firebase_core: ^4.2.1
+  cloud_firestore: ^6.1.0
+  firebase_auth: ^6.1.2
+  intl: ^0.20.2
+  share_plus: ^12.0.1
+  http: ^1.6.0
+  collection: ^1.19.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  isar_community_generator: ^3.3.2
+  build_runner: ^2.4.15
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/models/
+    - assets/branding/
+    - assets/mock/

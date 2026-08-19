@@ -1,0 +1,20 @@
+---
+description: A.R.I.D. mobile offline-first architecture — never violate these rules
+globs: lib/**/*.dart,android/**,ios/**,pubspec.yaml,test/**/*.dart
+alwaysApply: false
+---
+
+# A.R.I.D. Mobile Offline-First Rules
+
+The Flutter app is an offline-first field tool. Firebase is a sync target, never a runtime dependency.
+
+1. No screen or feature may show a loading spinner waiting on network for anything the user has already generated locally (their own reports, points, map markers).
+2. All writes: **local DB first**, then the sync service (Cloudinary for photos, Firestore for metadata) — never call cloud APIs from UI code.
+3. The app must be fully demoable in Airplane Mode end-to-end except for the initial map tile download.
+4. Every `Report` needs a client-generated UUID before it touches the network, to make sync idempotent.
+5. Points/rewards must feel instant to the user — never gate the reward feedback on a network round trip.
+6. Risk colors (red/yellow/green) are only for risk-level indicators. Never use them for generic buttons or navigation.
+7. Do not jump to Firebase sync work until the offline core (capture, classify, GPS, map, history, rewards) remains solid.
+8. Theme colors live in `AppColors` / `AppTheme`. Do not hardcode hex values in widgets.
+9. The mobile app never writes `reviewStatus` — that field belongs to the web dashboard only.
+10. Do not use Firebase Storage. Report images sync through Cloudinary's free unsigned upload preset.

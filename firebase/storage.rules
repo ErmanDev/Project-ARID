@@ -1,0 +1,2 @@
+Report photos are hosted on Cloudinary's free plan, not Firebase Storage.
+This file is unused. Keep Firebase on the Spark/free Firestore + Auth quotas only.

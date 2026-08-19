@@ -1,0 +1,7 @@
+Place your Teachable Machine TensorFlow Lite export here as:
+
+  arid_model.tflite
+
+Keep labels.txt in sync with the model's class names.
+Until the file is present, A.R.I.D. uses a deterministic on-device fallback so
+capture → classify → GPS → save still works fully offline.

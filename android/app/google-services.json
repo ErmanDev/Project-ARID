@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "946423882010",
+    "project_id": "arid-dengue-mapping",
+    "storage_bucket": "arid-dengue-mapping.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:946423882010:android:9782b79ff5f4425b538ca3",
+        "android_client_info": {
+          "package_name": "ph.arid.arid"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD5jkh19PsnHeRghvnnrxmQDmVxU-4pCd4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

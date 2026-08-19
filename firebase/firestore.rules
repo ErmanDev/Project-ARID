@@ -1,0 +1,37 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isStaff() {
+      return signedIn() && exists(/databases/$(database)/documents/staff/$(request.auth.uid));
+    }
+
+    function onlyReviewFields() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['reviewStatus', 'reviewedAt', 'reviewedBy', 'updatedAt']);
+    }
+
+    match /users/{userId} {
+      allow read: if isStaff() || (signedIn() && request.auth.uid == userId);
+      allow write: if signedIn() && request.auth.uid == userId;
+    }
+
+    match /reports/{reportId} {
+      allow read: if isStaff() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.id == reportId;
+      allow update: if (signedIn() && resource.data.userId == request.auth.uid)
+        || (isStaff() && onlyReviewFields());
+      allow delete: if false;
+    }
+
+    match /staff/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isStaff());
+      allow write: if false;
+    }
+  }
+}
