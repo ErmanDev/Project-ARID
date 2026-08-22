@@ -20,6 +20,18 @@ Create a Firestore document `staff/{uid}` for each dashboard user (Console or Ad
 
 For local bootstrap only, set `VITE_ALLOW_ANY_AUTH=true` in `.env`.
 
+### Viewing the access-denied page
+
+With mock data the signed-in user is staff, so `/denied` redirects to the
+dashboard. To work on that page, simulate a non-staff account:
+
+```bash
+VITE_MOCK_STAFF=false npm run dev
+```
+
+Then open `/denied`. Same for `/login`, which also redirects while a mock staff
+session is active.
+
 Enable Email/Password and/or Google in Firebase Auth.
 
 ## Deploy

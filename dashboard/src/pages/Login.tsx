@@ -1,97 +1,127 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../auth'
+import { authErrorMessage } from '../errors'
+import { IconGoogle } from '../components/icons'
+import { Alert, Button, Field, Input } from '../components/ui'
+import { ThemeToggle } from '../components/ThemeToggle'
 
 export function LoginPage() {
   const auth = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [busy, setBusy] = useState(false)
+  const [busy, setBusy] = useState<'email' | 'google' | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
   if (auth.user && auth.isStaff) return <Navigate to="/" replace />
   if (auth.user && !auth.isStaff) return <Navigate to="/denied" replace />
 
-  async function onSubmit(event: FormEvent) {
-    event.preventDefault()
-    setBusy(true)
+  async function run(kind: 'email' | 'google', action: () => Promise<void>) {
+    setBusy(kind)
     setMessage(null)
     try {
-      await auth.signInEmail(email, password)
+      await action()
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : 'Sign-in failed')
+      // null means "the user cancelled" — nothing worth showing them.
+      setMessage(authErrorMessage(err))
     } finally {
-      setBusy(false)
+      setBusy(null)
     }
   }
 
-  async function onGoogle() {
-    setBusy(true)
-    setMessage(null)
-    try {
-      await auth.signInGoogle()
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : 'Google sign-in failed')
-    } finally {
-      setBusy(false)
-    }
+  function onSubmit(event: FormEvent) {
+    event.preventDefault()
+    void run('email', () => auth.signInEmail(email, password))
   }
 
   return (
-    <div className="flex min-h-full items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md rounded-2xl border border-divider bg-surface p-8 shadow-sm">
-        <img
-          src="/arid-logo.png"
-          alt="A.R.I.D."
-          className="h-16 w-16"
-        />
-        <p className="mt-4 text-sm font-medium text-primary">A.R.I.D. monitoring</p>
-        <h1 className="mt-1 text-2xl font-semibold text-ink">Staff sign-in</h1>
-        <p className="mt-2 text-sm text-muted">
-          For LGU and health-worker accounts. Field capture stays on the mobile app.
-        </p>
-        {!auth.configured ? (
-          <p className="mt-6 rounded-lg border border-divider bg-background p-3 text-sm text-muted">
-            Firebase is not configured. Copy <code>dashboard/.env.example</code> to{' '}
-            <code>dashboard/.env</code> with the same project the mobile app uses.
+    <div className="flex min-h-full items-center justify-center bg-bg px-4 py-10">
+      <main className="w-full max-w-[26rem]">
+        <div className="mb-3 flex justify-end">
+          <ThemeToggle />
+        </div>
+        <div className="rounded-panel border border-border bg-surface p-7 shadow-md">
+          <img src="/arid-logo.png" alt="" className="size-12" />
+          <h1 className="mt-4 text-xl font-semibold tracking-tight text-ink">
+            Staff sign-in
+          </h1>
+          <p className="mt-1.5 text-base text-muted">
+            A.R.I.D. breeding-site monitoring for LGU and health-worker accounts.
+            Field capture stays on the mobile app.
           </p>
-        ) : (
-          <form className="mt-6 space-y-3" onSubmit={onSubmit}>
-            <input
-              className="w-full rounded-lg border border-divider px-3 py-2 text-sm"
-              type="email"
-              required
-              placeholder="Work email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-            <input
-              className="w-full rounded-lg border border-divider px-3 py-2 text-sm"
-              type="password"
-              required
-              placeholder="Password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
-            {message ? <p className="text-sm text-ink">{message}</p> : null}
-            <button
-              type="submit"
-              disabled={busy}
-              className="w-full rounded-lg bg-primary py-2.5 text-sm font-medium text-white disabled:opacity-60"
-            >
-              {busy ? 'Signing in…' : 'Sign in'}
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void onGoogle()}
-              className="w-full rounded-lg border border-primary py-2.5 text-sm font-medium text-primary disabled:opacity-60"
-            >
-              Continue with Google
-            </button>
-          </form>
-        )}
-      </div>
+
+          {!auth.configured ? (
+            <Alert tone="warning" className="mt-6">
+              Firebase is not configured. Copy{' '}
+              <code>dashboard/.env.example</code> to <code>dashboard/.env</code>{' '}
+              using the same project as the mobile app.
+            </Alert>
+          ) : (
+            <form className="mt-6 space-y-4" onSubmit={onSubmit} noValidate>
+              <Field label="Work email" id="login-email">
+                {(props) => (
+                  <Input
+                    {...props}
+                    type="email"
+                    required
+                    autoComplete="email"
+                    autoFocus
+                    placeholder="you@lgu.gov.ph"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                  />
+                )}
+              </Field>
+
+              <Field label="Password" id="login-password">
+                {(props) => (
+                  <Input
+                    {...props}
+                    type="password"
+                    required
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                  />
+                )}
+              </Field>
+
+              {message ? (
+                <Alert tone="error" live>
+                  {message}
+                </Alert>
+              ) : null}
+
+              <div className="space-y-2.5 pt-1">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  block
+                  loading={busy === 'email'}
+                  disabled={busy !== null}
+                >
+                  Sign in
+                </Button>
+                <Button
+                  variant="secondary"
+                  block
+                  icon={<IconGoogle size={16} />}
+                  loading={busy === 'google'}
+                  disabled={busy !== null}
+                  onClick={() => void run('google', auth.signInGoogle)}
+                >
+                  Continue with Google
+                </Button>
+              </div>
+            </form>
+          )}
+        </div>
+
+        <p className="mt-4 px-1 text-center text-xs text-muted">
+          Access requires a <code>staff</code> record in Firestore. Ask an
+          administrator if sign-in succeeds but the dashboard denies you.
+        </p>
+      </main>
     </div>
   )
 }

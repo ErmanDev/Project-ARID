@@ -1,46 +1,364 @@
 @import "tailwindcss";
 
+/* ============================================================================
+   A.R.I.D. design tokens
+   Institutional light register. Brand hues are preserved exactly: primary
+   oklch(0.552 0.059 224) is the original #4A7A8C, secondary is #6B9080, and the
+   three risk hues keep their original angles (19 / 80 / 145).
+   Neutrals are tinted 0.004-0.008 chroma toward the brand's own hue (232),
+   not toward a default warm. Every text/background pair below is
+   contrast-verified against WCAG AA (4.5:1 body, 3:1 large text and non-text
+   boundaries).
+   ========================================================================= */
+
 @theme {
-  --color-primary: #4a7a8c;
-  --color-secondary: #6b9080;
-  --color-risk-red: #b5555a;
-  --color-risk-yellow: #c9a66b;
-  --color-risk-green: #7c9c7c;
-  --color-background: #f5f5f3;
+  /* --- surfaces (four levels: sunken < bg < panel < surface) ------------- */
+  --color-bg: oklch(0.972 0.004 232);
   --color-surface: #ffffff;
-  --color-ink: #2e3438;
-  --color-muted: #6e7477;
-  --color-divider: #e2e2e0;
-  --font-sans: system-ui, "Segoe UI", Roboto, sans-serif;
+  --color-panel: oklch(0.984 0.005 232);
+  --color-sunken: oklch(0.955 0.006 232);
+
+  /* --- lines ------------------------------------------------------------- */
+  --color-border: oklch(0.906 0.008 232); /* hairline, decorative */
+  --color-border-strong: oklch(0.645 0.018 232); /* 3.02:1 on bg, form controls */
+
+  /* --- text -------------------------------------------------------------- */
+  --color-ink: oklch(0.3 0.014 236); /* 12.5:1 on bg */
+  --color-ink-2: oklch(0.455 0.013 232); /* 6.7:1  on bg */
+  --color-muted: oklch(0.53 0.012 232); /* 4.9:1  on bg, AA floor */
+
+  /* --- primary ----------------------------------------------------------- */
+  --color-primary-50: oklch(0.966 0.014 224);
+  --color-primary-100: oklch(0.93 0.026 224);
+  --color-primary-200: oklch(0.862 0.04 224);
+  --color-primary: oklch(0.552 0.059 224); /* = #4A7A8C, unchanged */
+  --color-primary-600: oklch(0.5 0.062 224); /* hover on solid */
+  --color-primary-700: oklch(0.435 0.06 224); /* active on solid */
+  --color-primary-ink: oklch(0.455 0.062 224); /* 7.2:1 on white, text/links */
+
+  --color-secondary: oklch(0.621 0.048 166);
+  --color-secondary-700: oklch(0.47 0.052 166); /* 6.7:1 with white */
+
+  /* --- risk: tint (bg) / edge (hairline) / base (map) / solid (dot, fill) /
+         ink (text). base keeps the original hex so map and app agree. ------ */
+  --color-risk-red-tint: oklch(0.958 0.03 19);
+  --color-risk-red-edge: oklch(0.8 0.085 19);
+  --color-risk-red: oklch(0.57 0.125 19); /* = #B5555A */
+  --color-risk-red-solid: oklch(0.52 0.145 19);
+  --color-risk-red-ink: oklch(0.445 0.135 19); /* 7.1:1 on tint */
+
+  --color-risk-yellow-tint: oklch(0.96 0.036 80);
+  --color-risk-yellow-edge: oklch(0.81 0.09 80);
+  --color-risk-yellow: oklch(0.743 0.087 80); /* = #C9A66B */
+  --color-risk-yellow-solid: oklch(0.56 0.105 80);
+  --color-risk-yellow-ink: oklch(0.445 0.09 80); /* 6.9:1 on tint */
+
+  --color-risk-green-tint: oklch(0.958 0.028 145);
+  --color-risk-green-edge: oklch(0.805 0.075 145);
+  --color-risk-green: oklch(0.659 0.059 145); /* = #7C9C7C */
+  --color-risk-green-solid: oklch(0.54 0.095 145);
+  --color-risk-green-ink: oklch(0.44 0.075 145); /* 6.8:1 on tint */
+
+  /* --- type: fixed rem scale, ~1.14 ratio. Product UI base is 14px. ------ */
+  --font-sans: Inter, ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.4;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.45;
+  --text-base: 0.875rem;
+  --text-base--line-height: 1.5;
+  --text-md: 0.9375rem;
+  --text-md--line-height: 1.5;
+  --text-lg: 1.0625rem;
+  --text-lg--line-height: 1.4;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.3;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 1.2;
+  --text-stat: 1.875rem;
+  --text-stat--line-height: 1.05;
+
+  /* --- radii ------------------------------------------------------------- */
+  --radius-control: 0.5rem;
+  --radius-card: 0.75rem;
+  --radius-panel: 1rem;
+
+  /* --- elevation: cool-tinted, low-spread. Institutional, not floaty. ---- */
+  --shadow-xs: 0 1px 2px oklch(0.3 0.02 236 / 0.06);
+  --shadow-sm: 0 1px 2px oklch(0.3 0.02 236 / 0.06),
+    0 2px 6px oklch(0.3 0.02 236 / 0.05);
+  --shadow-md: 0 2px 4px oklch(0.3 0.02 236 / 0.06),
+    0 8px 20px oklch(0.3 0.02 236 / 0.08);
+  --shadow-overlay: 0 4px 8px oklch(0.3 0.02 236 / 0.08),
+    0 16px 32px oklch(0.3 0.02 236 / 0.12);
+
+  /* --- motion: exponential ease-out only. No bounce. --------------------- */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 240ms;
 }
 
-html,
-body,
-#root {
-  height: 100%;
-  margin: 0;
+/* ============================================================================
+   Dark theme
+   Tailwind v4 emits utilities as `var(--color-*)` references, so redefining the
+   same tokens here re-themes every existing utility with no `dark:` variants in
+   the markup.
+   `[data-theme]` is stamped on <html> before first paint (see index.html), and
+   the media query covers "system" where no explicit choice is stored.
+   Contrast is verified against the dark surfaces, not inherited from light:
+   body text >= 5.3:1, risk text >= 7.9:1, dots and borders >= 3:1.
+   ========================================================================= */
+
+/* Lets one-off `dark:` utilities be written where a token swap is not enough. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+@layer theme {
+  /* One selector, because the inline script in index.html resolves "system" to
+     a concrete value and always stamps data-theme. No duplicated media block,
+     and no flash of the wrong theme on load. */
+  :root[data-theme='dark'] {
+    /* --- surfaces --------------------------------------------------------- */
+    --color-bg: oklch(0.185 0.008 240);
+    --color-surface: oklch(0.235 0.01 240);
+    --color-panel: oklch(0.212 0.009 240);
+    --color-sunken: oklch(0.158 0.008 240);
+
+    /* --- lines ------------------------------------------------------------ */
+    --color-border: oklch(0.32 0.012 240);
+    --color-border-strong: oklch(0.52 0.018 240); /* 3.04:1 on surface */
+
+    /* --- text ------------------------------------------------------------- */
+    --color-ink: oklch(0.955 0.004 240); /* 16.3:1 on bg */
+    --color-ink-2: oklch(0.8 0.008 240); /* 9.9:1  on bg */
+    --color-muted: oklch(0.66 0.011 240); /* 5.9:1  on bg */
+
+    /* --- primary. Tints invert to dark washes; `-ink` carries text. ------- */
+    --color-primary-50: oklch(0.262 0.022 224);
+    --color-primary-100: oklch(0.305 0.034 224);
+    --color-primary-200: oklch(0.38 0.048 224);
+    --color-primary: oklch(0.56 0.078 224); /* 4.56:1 with white */
+    /* Hover/active DARKEN here. Lightening is the usual dark-mode move, but
+       primary is already at the ceiling where white label text still clears
+       4.5:1 — going lighter would fail the button's own text. */
+    --color-primary-600: oklch(0.5 0.078 224); /* 5.83:1 with white */
+    --color-primary-700: oklch(0.45 0.078 224); /* 7.28:1 with white */
+    --color-primary-ink: oklch(0.8 0.062 224); /* 9.1:1 on surface */
+
+    --color-secondary: oklch(0.66 0.06 166);
+    --color-secondary-700: oklch(0.74 0.055 166);
+
+    /* --- risk ------------------------------------------------------------- */
+    --color-risk-red-tint: oklch(0.285 0.048 19);
+    --color-risk-red-edge: oklch(0.42 0.085 19);
+    --color-risk-red: oklch(0.64 0.165 19);
+    --color-risk-red-solid: oklch(0.62 0.15 19);
+    --color-risk-red-ink: oklch(0.815 0.095 19); /* 7.9:1 on its tint */
+
+    --color-risk-yellow-tint: oklch(0.285 0.042 80);
+    --color-risk-yellow-edge: oklch(0.42 0.07 80);
+    --color-risk-yellow: oklch(0.76 0.115 80);
+    --color-risk-yellow-solid: oklch(0.7 0.11 80);
+    --color-risk-yellow-ink: oklch(0.85 0.085 80); /* 9.0:1 on its tint */
+
+    --color-risk-green-tint: oklch(0.28 0.04 145);
+    --color-risk-green-edge: oklch(0.41 0.06 145);
+    --color-risk-green: oklch(0.7 0.115 145);
+    --color-risk-green-solid: oklch(0.65 0.11 145);
+    --color-risk-green-ink: oklch(0.84 0.08 145); /* 9.1:1 on its tint */
+
+    /* Elevation cannot rely on a soft grey shadow against a dark ground, so
+       shadows deepen and lean on the token borders for separation. */
+    --shadow-xs: 0 1px 2px oklch(0 0 0 / 0.4);
+    --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.45), 0 2px 6px oklch(0 0 0 / 0.35);
+    --shadow-md: 0 2px 4px oklch(0 0 0 / 0.45), 0 8px 20px oklch(0 0 0 / 0.4);
+    --shadow-overlay: 0 4px 8px oklch(0 0 0 / 0.5),
+      0 16px 32px oklch(0 0 0 / 0.45);
+  }
 }
 
-body {
-  background: #f5f5f3;
-  color: #2e3438;
-  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+/* Semantic stacking order. Referenced as z-[var(--z-sticky)] so the intent is
+   readable at the call site and there are no 9999s. */
+:root {
+  --z-base: 1;
+  --z-map-overlay: 400; /* above leaflet tile/marker panes */
+  --z-sticky: 900;
+  --z-modal: 1000;
+  --z-toast: 1100;
 }
 
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Headings in product UI are labels, not display type. */
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+    letter-spacing: -0.011em;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Placeholders must clear 4.5:1 like any other text. */
+  ::placeholder {
+    color: var(--color-muted);
+    opacity: 1;
+  }
+
+  /* Numbers that sit in columns must not jitter as they tick. */
+  [data-numeric] {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+}
+
+@layer components {
+  /* Inset ring for controls whose outline a parent would clip. */
+  .focus-inset:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-primary);
+  }
+
+  /* Touch targets reach 44px on coarse pointers only, so the desktop toolbar
+     stays dense for operators on a mouse. */
+  @media (pointer: coarse) {
+    .tap {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
+}
+
+/* One focus treatment for the whole app. Deliberately unlayered: inside
+   `@layer base` a form control's outline-color resolved to currentColor
+   instead of the token, so selects focused ink-grey while buttons focused
+   primary. Unlayered rules outrank every @layer, which keeps the ring
+   identical on every control. */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Controls that opt into the inset ring keep it; the rule above must not
+   reintroduce an outline that a parent would clip. */
+.focus-inset:focus-visible {
+  outline: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Leaflet, themed to the light register. Restyled rather than left default:
+   default leaflet chrome is the loudest "unstyled map" tell there is.
+   ------------------------------------------------------------------------ */
 .leaflet-container {
   width: 100%;
   height: 100%;
-  background: #0b0d0f;
+  background: var(--color-sunken);
   font-family: inherit;
+  font-size: var(--text-xs);
 }
 
 .leaflet-control-attribution {
-  font-size: 11px;
-  color: #9aa0a6;
-  background: rgba(11, 13, 15, 0.72);
+  padding: 2px 6px;
+  border-radius: 4px 0 0 0;
+  background: oklch(1 0 0 / 0.82);
+  color: var(--color-muted);
+  font-size: 10px;
+  backdrop-filter: blur(4px);
+}
+
+.leaflet-control-attribution a {
+  color: var(--color-primary-ink);
+}
+
+.leaflet-bar {
+  overflow: hidden;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-control);
+  box-shadow: var(--shadow-sm);
+}
+
+.leaflet-bar a,
+.leaflet-bar a:hover {
+  width: 30px;
+  height: 30px;
+  border-bottom-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-ink-2);
+  font-size: 17px;
+  line-height: 30px;
+  transition: background var(--duration-fast) var(--ease-out-quart);
+}
+
+.leaflet-bar a:hover {
+  background: var(--color-primary-50);
+  color: var(--color-primary-ink);
+}
+
+.leaflet-tooltip {
+  padding: 4px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  box-shadow: var(--shadow-sm);
+}
+
+.leaflet-tooltip-top::before {
+  border-top-color: var(--color-border);
 }
 
 .arid-pin {
   background: transparent;
   border: none;
+  transition: filter var(--duration-base) var(--ease-out-quart);
+}
+
+.arid-pin:hover {
+  filter: brightness(1.06) drop-shadow(0 2px 4px oklch(0.3 0.02 236 / 0.3));
+}
+
+/* Selected marker gets a steady ring, not a pulse. Surveillance UI must not
+   blink at the operator all day. */
+.arid-pin--selected {
+  filter: drop-shadow(0 3px 6px oklch(0.3 0.02 236 / 0.35));
+}
+
+.arid-pin:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

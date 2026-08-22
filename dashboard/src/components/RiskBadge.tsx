@@ -6,15 +6,57 @@ const LABELS: Record<RiskLevel, string> = {
   green: 'Low risk',
 }
 
-export function RiskBadge({ level }: { level: RiskLevel }) {
-  const color =
-    level === 'red'
-      ? 'text-risk-red border-risk-red bg-risk-red/15'
-      : level === 'yellow'
-        ? 'text-risk-yellow border-risk-yellow bg-risk-yellow/15'
-        : 'text-risk-green border-risk-green bg-risk-green/15'
+/**
+ * Risk never rides on colour alone: every badge pairs a hue with its own label,
+ * and the dot uses the `-solid` ramp (>=3:1 on both surface and tint) so it
+ * stays distinguishable for colour-vision-deficient operators.
+ *
+ * Text uses the `-ink` ramp, which clears 6.8:1 on its tint. The previous
+ * version put the base hue on a 15% wash of itself: 2.06:1 for yellow.
+ */
+const TONE: Record<RiskLevel, { box: string; dot: string }> = {
+  red: {
+    box: 'border-risk-red-edge bg-risk-red-tint text-risk-red-ink',
+    dot: 'bg-risk-red-solid',
+  },
+  yellow: {
+    box: 'border-risk-yellow-edge bg-risk-yellow-tint text-risk-yellow-ink',
+    dot: 'bg-risk-yellow-solid',
+  },
+  green: {
+    box: 'border-risk-green-edge bg-risk-green-tint text-risk-green-ink',
+    dot: 'bg-risk-green-solid',
+  },
+}
+
+export function riskLabel(level: RiskLevel): string {
+  return LABELS[level]
+}
+
+export function RiskDot({ level }: { level: RiskLevel }) {
   return (
-    <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold ${color}`}>
+    <span
+      className={`size-2 shrink-0 rounded-full ${TONE[level].dot}`}
+      aria-hidden="true"
+    />
+  )
+}
+
+export function RiskBadge({
+  level,
+  size = 'md',
+}: {
+  level: RiskLevel
+  size?: 'sm' | 'md'
+}) {
+  const tone = TONE[level]
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border font-semibold ${tone.box} ${
+        size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1 text-sm'
+      }`}
+    >
+      <RiskDot level={level} />
       {LABELS[level]}
     </span>
   )

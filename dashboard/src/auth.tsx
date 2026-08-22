@@ -21,7 +21,7 @@ import {
   getFirebaseAuth,
   googleProvider,
 } from './firebase'
-import { useMockData } from './config'
+import { mockIsStaff, useMockData } from './config'
 
 type AuthValue = {
   user: User | null
@@ -32,6 +32,12 @@ type AuthValue = {
   signInEmail: (email: string, password: string) => Promise<void>
   signInGoogle: () => Promise<void>
   signOut: () => Promise<void>
+  /**
+   * Re-runs the staff lookup for the current user and returns the result.
+   * Lets someone waiting on provisioning poll for it, instead of having to
+   * sign out and back in to pick up a `staff/{uid}` document that now exists.
+   */
+  recheckStaff: () => Promise<boolean>
 }
 
 const AuthContext = createContext<AuthValue | null>(null)
@@ -51,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (useMockData) {
       setUser({ uid: 'mock-staff', email: 'staff@arid.local' } as User)
-      setIsStaff(true)
+      setIsStaff(mockIsStaff)
       setLoading(false)
       return
     }
@@ -100,6 +106,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut: async () => {
         if (useMockData) return
         if (firebaseConfigured) await firebaseSignOut(getFirebaseAuth())
+      },
+      recheckStaff: async () => {
+        // Honours the mock flag so "Check again" tells the truth in mock mode.
+        if (useMockData) return mockIsStaff
+        if (!user) return false
+        setError(null)
+        try {
+          const staff = await resolveStaff(user.uid)
+          setIsStaff(staff)
+          return staff
+        } catch (err) {
+          setError(
+            err instanceof Error ? err.message : 'Could not verify staff access',
+          )
+          return false
+        }
       },
     }),
     [user, isStaff, loading, error],

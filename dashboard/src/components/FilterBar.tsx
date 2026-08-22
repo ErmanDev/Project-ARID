@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react'
 import { AREAS } from '../areas'
+import { IconHeat, IconHotspot, IconPin } from './icons'
+import { LayerToggle, Segmented, Select, type SegmentOption } from './ui'
 import type { Filters, RiskLevel } from '../types'
 
 type Props = {
@@ -9,111 +10,134 @@ type Props = {
   counts: { all: number; red: number; yellow: number; green: number }
 }
 
-function Chip({
-  active,
-  onClick,
+type RiskChoice = 'all' | RiskLevel
+
+const ALL_RISKS: RiskLevel[] = ['red', 'yellow', 'green']
+
+function Group({
+  label,
   children,
 }: {
-  active: boolean
-  onClick: () => void
-  children: ReactNode
+  label: string
+  children: React.ReactNode
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-full border px-3 py-1 text-xs font-medium ${
-        active
-          ? 'border-primary bg-primary/10 text-primary'
-          : 'border-divider bg-surface text-muted'
-      }`}
-    >
+    // Full-width rows on phones; content-sized from md up. Never flex-1: a
+    // stretched group leaves ragged gaps and misaligns against its neighbours.
+    <div className="flex w-full min-w-0 flex-wrap items-center gap-2 md:w-auto">
+      {/* The label does the separating work a vertical rule used to. A rule
+          strands itself at the end of a row whenever the toolbar wraps. */}
+      <span className="w-12 shrink-0 text-xs font-medium text-muted md:w-auto">
+        {label}
+      </span>
       {children}
-    </button>
+    </div>
   )
 }
 
+/**
+ * Three jobs, visually separated: choose the scope (where/when/what), narrow by
+ * risk, choose what the map draws. Previously all nine controls sat in one
+ * undifferentiated wrap of mixed pills and selects, so nothing read as primary.
+ */
 export function FilterBar({ filters, onChange, hotspotCount, counts }: Props) {
-  const allRisks: RiskLevel[] = ['red', 'yellow', 'green']
-  const allActive = allRisks.every((level) => filters.risks.includes(level))
-  const only = filters.risks.length === 1 ? filters.risks[0] : null
+  const riskChoice: RiskChoice =
+    filters.risks.length === 1 ? filters.risks[0] : 'all'
 
-  function showRisk(level: RiskLevel | 'all') {
-    onChange({
-      ...filters,
-      risks: level === 'all' ? allRisks : [level],
-    })
-  }
+  const riskOptions: SegmentOption<RiskChoice>[] = [
+    { value: 'all', label: 'All', meta: counts.all },
+    { value: 'red', label: 'High', meta: counts.red, title: 'High risk only' },
+    {
+      value: 'yellow',
+      label: 'Moderate',
+      meta: counts.yellow,
+      title: 'Moderate risk only',
+    },
+    { value: 'green', label: 'Low', meta: counts.green, title: 'Low risk only' },
+  ]
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <select
-        className="rounded-lg border border-divider bg-surface px-3 py-1.5 text-sm text-ink"
-        value={filters.areaId}
-        onChange={(event) => onChange({ ...filters, areaId: event.target.value })}
-      >
-        {AREAS.map((area) => (
-          <option key={area.id} value={area.id}>
-            {area.name}
-          </option>
-        ))}
-      </select>
-      <Chip active={allActive} onClick={() => showRisk('all')}>
-        All ({counts.all})
-      </Chip>
-      <Chip active={only === 'red'} onClick={() => showRisk('red')}>
-        High ({counts.red})
-      </Chip>
-      <Chip active={only === 'yellow'} onClick={() => showRisk('yellow')}>
-        Moderate ({counts.yellow})
-      </Chip>
-      <Chip active={only === 'green'} onClick={() => showRisk('green')}>
-        Low ({counts.green})
-      </Chip>
-      <select
-        className="rounded-lg border border-divider bg-surface px-3 py-1.5 text-sm text-ink"
-        value={filters.classification}
-        onChange={(event) =>
-          onChange({
-            ...filters,
-            classification: event.target.value as Filters['classification'],
-          })
-        }
-      >
-        <option value="all">All classes</option>
-        <option value="breeding">Breeding</option>
-        <option value="nonBreeding">Non-breeding</option>
-      </select>
-      <select
-        className="rounded-lg border border-divider bg-surface px-3 py-1.5 text-sm text-ink"
-        value={filters.range}
-        onChange={(event) =>
-          onChange({ ...filters, range: event.target.value as Filters['range'] })
-        }
-      >
-        <option value="all">All dates</option>
-        <option value="24h">Last 24 hours</option>
-        <option value="7d">Last 7 days</option>
-        <option value="30d">Last 30 days</option>
-      </select>
-      <Chip
-        active={filters.showMarkers}
-        onClick={() => onChange({ ...filters, showMarkers: !filters.showMarkers })}
-      >
-        Markers
-      </Chip>
-      <Chip
-        active={filters.showHeatmap}
-        onClick={() => onChange({ ...filters, showHeatmap: !filters.showHeatmap })}
-      >
-        Heatmap
-      </Chip>
-      <Chip
-        active={filters.showHotspots}
-        onClick={() => onChange({ ...filters, showHotspots: !filters.showHotspots })}
-      >
-        Hotspots{hotspotCount ? ` (${hotspotCount})` : ''}
-      </Chip>
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5">
+      <Group label="Scope">
+        <Select
+          label="Study area"
+          value={filters.areaId}
+          onChange={(event) => onChange({ ...filters, areaId: event.target.value })}
+        >
+          {AREAS.map((area) => (
+            <option key={area.id} value={area.id}>
+              {area.name}
+            </option>
+          ))}
+        </Select>
+        <Select
+          label="Date range"
+          value={filters.range}
+          onChange={(event) =>
+            onChange({ ...filters, range: event.target.value as Filters['range'] })
+          }
+        >
+          <option value="all">All dates</option>
+          <option value="24h">Last 24 hours</option>
+          <option value="7d">Last 7 days</option>
+          <option value="30d">Last 30 days</option>
+        </Select>
+        <Select
+          label="Classification"
+          value={filters.classification}
+          onChange={(event) =>
+            onChange({
+              ...filters,
+              classification: event.target.value as Filters['classification'],
+            })
+          }
+        >
+          <option value="all">All classes</option>
+          <option value="breeding">Breeding</option>
+          <option value="nonBreeding">Non-breeding</option>
+        </Select>
+      </Group>
+
+      <Group label="Risk">
+        <Segmented
+          label="Filter by risk level"
+          value={riskChoice}
+          options={riskOptions}
+          onChange={(next) =>
+            onChange({
+              ...filters,
+              risks: next === 'all' ? ALL_RISKS : [next],
+            })
+          }
+        />
+      </Group>
+
+      <Group label="Layers">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <LayerToggle
+            pressed={filters.showMarkers}
+            onChange={(next) => onChange({ ...filters, showMarkers: next })}
+            icon={<IconPin size={15} />}
+          >
+            Markers
+          </LayerToggle>
+          <LayerToggle
+            pressed={filters.showHeatmap}
+            onChange={(next) => onChange({ ...filters, showHeatmap: next })}
+            icon={<IconHeat size={15} />}
+          >
+            Heatmap
+          </LayerToggle>
+          <LayerToggle
+            pressed={filters.showHotspots}
+            onChange={(next) => onChange({ ...filters, showHotspots: next })}
+            icon={<IconHotspot size={15} />}
+            count={hotspotCount}
+          >
+            Hotspots
+          </LayerToggle>
+        </div>
+      </Group>
     </div>
   )
 }

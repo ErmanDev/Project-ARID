@@ -67,6 +67,9 @@ export function useReports(enabled: boolean) {
   const [reports, setReports] = useState<Report[]>([])
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Distinguishes "still waiting for the first snapshot" from "zero reports",
+  // so the panel can show skeletons instead of an empty state that is wrong.
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!enabled) return
@@ -75,6 +78,7 @@ export function useReports(enabled: boolean) {
         setReports(getMockReports())
         setUpdatedAt(new Date())
         setError(null)
+        setLoading(false)
       }
       apply()
       window.addEventListener('arid-mock-reports', apply)
@@ -90,13 +94,17 @@ export function useReports(enabled: boolean) {
         setReports(next)
         setUpdatedAt(new Date())
         setError(null)
+        setLoading(false)
       },
-      (err) => setError(err.message),
+      (err) => {
+        setError(err.message)
+        setLoading(false)
+      },
     )
     return unsub
   }, [enabled])
 
-  return { reports, updatedAt, error }
+  return { reports, updatedAt, error, loading }
 }
 
 export function useUsers(enabled: boolean) {

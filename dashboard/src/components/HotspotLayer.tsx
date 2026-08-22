@@ -1,5 +1,6 @@
-import { Circle } from 'react-leaflet'
-import { RISK_COLOR } from '../format'
+import { Circle, Tooltip } from 'react-leaflet'
+import { riskColor, riskFill } from '../format'
+import { useTheme } from '../theme'
 import type { Report } from '../types'
 
 type Hotspot = {
@@ -54,6 +55,9 @@ export function buildHotspots(reports: Report[]): Hotspot[] {
 }
 
 export function HotspotLayer({ reports }: { reports: Report[] }) {
+  const { resolved } = useTheme()
+  const stroke = riskColor('red', resolved)
+  const fill = riskFill('red', resolved)
   const hotspots = buildHotspots(reports)
   return (
     <>
@@ -63,28 +67,33 @@ export function HotspotLayer({ reports }: { reports: Report[] }) {
           center={[spot.lat, spot.lng]}
           radius={spot.radiusMeters * 1.28}
           pathOptions={{
-            color: RISK_COLOR.red,
-            weight: 2,
+            color: stroke,
+            weight: 1.5,
             dashArray: '7 9',
-            fillColor: RISK_COLOR.red,
-            fillOpacity: 0.08,
+            fillColor: fill,
+            fillOpacity: 0.06,
             interactive: false,
           }}
         />
       ))}
+      {/* Fills are lighter than before: on a light basemap the old 20% of the
+          dark red buried the pins the cluster is meant to call out. */}
       {hotspots.map((spot) => (
         <Circle
           key={`${spot.key}-core`}
           center={[spot.lat, spot.lng]}
           radius={spot.radiusMeters}
           pathOptions={{
-            color: RISK_COLOR.red,
-            weight: 2.5,
-            fillColor: RISK_COLOR.red,
-            fillOpacity: 0.2,
-            interactive: false,
+            color: stroke,
+            weight: 2,
+            fillColor: fill,
+            fillOpacity: 0.14,
           }}
-        />
+        >
+          <Tooltip direction="top" offset={[0, -6]}>
+            {spot.count} high-risk reports clustered here
+          </Tooltip>
+        </Circle>
       ))}
     </>
   )
