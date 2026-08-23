@@ -40,11 +40,11 @@ class _PinDropScreenState extends ConsumerState<PinDropScreen> {
       appBar: AppBar(title: const Text('Drop a pin')),
       body: Column(
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.all(12),
             child: Text(
               'GPS did not resolve. Drag the map so the pin sits on the breeding site, then save. This still stores locally with no internet.',
-              style: TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: context.aridMuted),
             ),
           ),
           Expanded(
@@ -72,7 +72,11 @@ class _PinDropScreenState extends ConsumerState<PinDropScreen> {
                   ],
                 ),
                 const IgnorePointer(
-                  child: Icon(Icons.location_pin, size: 44, color: AppColors.primary),
+                  child: Icon(
+                    Icons.location_pin,
+                    size: 44,
+                    color: AppColors.primary,
+                  ),
                 ),
               ],
             ),

@@ -51,19 +51,19 @@ class ResultScreen extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   'Confidence ${(report.confidenceScore * 100).toStringAsFixed(1)}%',
-                  style: const TextStyle(color: AppColors.textSecondary),
+                  style: TextStyle(color: context.aridMuted),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   '${report.latitude.toStringAsFixed(5)}, ${report.longitude.toStringAsFixed(5)}'
                   '${report.gpsManual ? '  ·  manual pin' : '  ·  ±${report.gpsAccuracy.toStringAsFixed(0)} m'}',
-                  style: const TextStyle(color: AppColors.textSecondary),
+                  style: TextStyle(color: context.aridMuted),
                 ),
                 if (!outcome.usedOnDeviceModel) ...[
                   const SizedBox(height: 12),
-                  const Text(
+                  Text(
                     'Development classifier is active. Place your Teachable Machine export at assets/models/arid_model.tflite for production inference.',
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                    style: TextStyle(color: context.aridMuted, fontSize: 12),
                   ),
                 ],
               ],
@@ -84,13 +84,13 @@ class ResultScreen extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 4),
                     child: Text(
                       line,
-                      style: const TextStyle(color: AppColors.textSecondary),
+                      style: TextStyle(color: context.aridMuted),
                     ),
                   ),
                 ),
-                const Text(
+                Text(
                   'Verified after a successful cloud sync. The total is already on this device.',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                  style: TextStyle(color: context.aridMuted, fontSize: 12),
                 ),
               ],
             ),

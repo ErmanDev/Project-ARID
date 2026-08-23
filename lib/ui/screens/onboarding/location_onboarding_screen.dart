@@ -52,12 +52,9 @@ class _LocationOnboardingScreenState
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
-              const Text(
+              Text(
                 LocationService.rationale,
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  height: 1.4,
-                ),
+                style: TextStyle(color: context.aridMuted, height: 1.4),
                 textAlign: TextAlign.center,
               ),
               const Spacer(),

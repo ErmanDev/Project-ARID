@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/material.dart';
 import 'package:isar_community/isar.dart';
 import 'package:uuid/uuid.dart';
 
@@ -44,6 +45,34 @@ final syncQueueRepositoryProvider = Provider<SyncQueueRepository>((ref) {
 final configRepositoryProvider = Provider<ConfigRepository>((ref) {
   return ConfigRepository(ref.watch(isarProvider));
 });
+
+final themeModeProvider = StateNotifierProvider<ThemeModeController, ThemeMode>(
+  (ref) {
+    return ThemeModeController(ref.watch(configRepositoryProvider));
+  },
+);
+
+class ThemeModeController extends StateNotifier<ThemeMode> {
+  ThemeModeController(this._config) : super(ThemeMode.system) {
+    _load();
+  }
+
+  final ConfigRepository _config;
+
+  Future<void> _load() async {
+    final stored = await _config.get(ConfigKeys.themeMode, fallback: 'system');
+    state = switch (stored) {
+      'light' => ThemeMode.light,
+      'dark' => ThemeMode.dark,
+      _ => ThemeMode.system,
+    };
+  }
+
+  Future<void> setMode(ThemeMode mode) async {
+    state = mode;
+    await _config.set(ConfigKeys.themeMode, mode.name);
+  }
+}
 
 final classifierProvider = Provider<ClassifierService>((ref) {
   final service = ClassifierService();
@@ -118,10 +147,7 @@ final locationOnboardingDoneProvider = FutureProvider<bool>((ref) async {
 });
 
 class CaptureInput {
-  const CaptureInput({
-    required this.sourceFile,
-    this.manualFix,
-  });
+  const CaptureInput({required this.sourceFile, this.manualFix});
 
   final File sourceFile;
   final GpsFix? manualFix;
@@ -141,81 +167,82 @@ class CaptureOutcome {
 
 final submitReportProvider =
     Provider<Future<CaptureOutcome> Function(CaptureInput)>((ref) {
-  return (input) async {
-    final reports = ref.read(reportRepositoryProvider);
-    final users = ref.read(userRepositoryProvider);
-    final images = ref.read(imageServiceProvider);
-    final classifier = ref.read(classifierProvider);
-    final location = ref.read(locationServiceProvider);
-    final rules = await ref.read(pointsRulesProvider.future);
-    final profile = await users.get();
-    if (profile == null) {
-      throw StateError('Local profile missing');
-    }
+      return (input) async {
+        final reports = ref.read(reportRepositoryProvider);
+        final users = ref.read(userRepositoryProvider);
+        final images = ref.read(imageServiceProvider);
+        final classifier = ref.read(classifierProvider);
+        final location = ref.read(locationServiceProvider);
+        final rules = await ref.read(pointsRulesProvider.future);
+        final profile = await users.get();
+        if (profile == null) {
+          throw StateError('Local profile missing');
+        }
 
-    final id = const Uuid().v4();
-    final persisted = await images.persistReportImage(
-      source: input.sourceFile,
-      reportId: id,
-    );
+        final id = const Uuid().v4();
+        final persisted = await images.persistReportImage(
+          source: input.sourceFile,
+          reportId: id,
+        );
 
-    final classificationFuture = classifier.classify(persisted);
-    final gpsFuture = input.manualFix != null
-        ? Future.value(input.manualFix)
-        : location.currentFix();
+        final classificationFuture = classifier.classify(persisted);
+        final gpsFuture = input.manualFix != null
+            ? Future.value(input.manualFix)
+            : location.currentFix();
 
-    final classified = await classificationFuture;
-    var gps = await gpsFuture;
-    gps ??= input.manualFix;
-    if (gps == null) {
-      throw const GpsRequiredException();
-    }
+        final classified = await classificationFuture;
+        var gps = await gpsFuture;
+        gps ??= input.manualFix;
+        if (gps == null) {
+          throw const GpsRequiredException();
+        }
 
-    final risk = RiskMapper(
-      highConfidenceThreshold: rules.highConfidenceThreshold,
-    ).map(
-      classification: classified.classification,
-      confidence: classified.confidenceScore,
-    );
+        final risk =
+            RiskMapper(
+              highConfidenceThreshold: rules.highConfidenceThreshold,
+            ).map(
+              classification: classified.classification,
+              confidence: classified.confidenceScore,
+            );
 
-    final award = PointsEngine(rules).award(
-      classification: classified.classification,
-      confidence: classified.confidenceScore,
-      riskLevel: risk,
-      profile: profile,
-      capturedAt: DateTime.now(),
-    );
+        final award = PointsEngine(rules).award(
+          classification: classified.classification,
+          confidence: classified.confidenceScore,
+          riskLevel: risk,
+          profile: profile,
+          capturedAt: DateTime.now(),
+        );
 
-    final report = Report()
-      ..id = id
-      ..imagePath = persisted.path
-      ..classification = classified.classification
-      ..confidenceScore = classified.confidenceScore
-      ..riskLevel = risk
-      ..latitude = gps.latitude
-      ..longitude = gps.longitude
-      ..gpsAccuracy = gps.accuracy
-      ..capturedAt = DateTime.now()
-      ..userId = profile.id
-      ..pointsAwarded = award.points
-      ..pointsStatus = PointsStatus.provisional
-      ..syncStatus = SyncStatus.pendingUpload
-      ..groundTruth = GroundTruth.unlabeled
-      ..gpsManual = gps.manual;
+        final report = Report()
+          ..id = id
+          ..imagePath = persisted.path
+          ..classification = classified.classification
+          ..confidenceScore = classified.confidenceScore
+          ..riskLevel = risk
+          ..latitude = gps.latitude
+          ..longitude = gps.longitude
+          ..gpsAccuracy = gps.accuracy
+          ..capturedAt = DateTime.now()
+          ..userId = profile.id
+          ..pointsAwarded = award.points
+          ..pointsStatus = PointsStatus.provisional
+          ..syncStatus = SyncStatus.pendingUpload
+          ..groundTruth = GroundTruth.unlabeled
+          ..gpsManual = gps.manual;
 
-    await reports.saveAndEnqueue(report);
-    await users.applyNewReport(
-      points: award.points,
-      capturedAt: report.capturedAt,
-    );
+        await reports.saveAndEnqueue(report);
+        await users.applyNewReport(
+          points: award.points,
+          capturedAt: report.capturedAt,
+        );
 
-    return CaptureOutcome(
-      report: report,
-      breakdown: award.breakdown,
-      usedOnDeviceModel: classified.usedOnDeviceModel,
-    );
-  };
-});
+        return CaptureOutcome(
+          report: report,
+          breakdown: award.breakdown,
+          usedOnDeviceModel: classified.usedOnDeviceModel,
+        );
+      };
+    });
 
 class GpsRequiredException implements Exception {
   const GpsRequiredException();

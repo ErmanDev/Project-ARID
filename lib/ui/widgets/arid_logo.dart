@@ -20,9 +20,14 @@ class AridLogo extends StatelessWidget {
 }
 
 class AridBrandTitle extends StatelessWidget {
-  const AridBrandTitle({super.key, this.label = 'A.R.I.D.'});
+  const AridBrandTitle({
+    super.key,
+    this.label = 'A.R.I.D.',
+    this.subtitle = 'Breeding-site monitoring',
+  });
 
   final String label;
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -30,10 +35,27 @@ class AridBrandTitle extends StatelessWidget {
       children: [
         const AridLogo(size: 32),
         const SizedBox(width: 10),
-        Flexible(
-          child: Text(
-            label,
-            overflow: TextOverflow.ellipsis,
+        Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.1,
+                ).copyWith(color: Theme.of(context).colorScheme.primary),
+              ),
+              if (subtitle != null)
+                Text(
+                  subtitle!,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+            ],
           ),
         ),
       ],

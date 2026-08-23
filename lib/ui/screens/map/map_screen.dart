@@ -14,6 +14,7 @@ import '../../../services/map/hotspots.dart';
 import '../../../services/map/tile_cache.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/common.dart';
+import '../../widgets/theme_mode_button.dart';
 
 class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({super.key});
@@ -37,12 +38,27 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   static const _fallbackCenter = LatLng(14.5995, 120.9842);
   static const _userZoom = 16.0;
-  static const _whiteLabel = TextStyle(color: Colors.white, fontSize: 13);
   static const _tileContrast = ColorFilter.matrix(<double>[
-    1.45, 0, 0, 0, 22,
-    0, 1.45, 0, 0, 22,
-    0, 0, 1.45, 0, 22,
-    0, 0, 0, 1, 0,
+    1.45,
+    0,
+    0,
+    0,
+    22,
+    0,
+    1.45,
+    0,
+    0,
+    22,
+    0,
+    0,
+    1.45,
+    0,
+    22,
+    0,
+    0,
+    0,
+    1,
+    0,
   ]);
 
   @override
@@ -76,7 +92,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     } catch (_) {
       if (announce && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not move the map to your location.')),
+          const SnackBar(
+            content: Text('Could not move the map to your location.'),
+          ),
         );
       }
     } finally {
@@ -203,9 +221,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final reports = ref.watch(reportsProvider).valueOrNull ?? const <Report>[];
     final filtered = _applyFilters(reports);
     final highCount = reports.where((r) => r.riskLevel == RiskLevel.red).length;
-    final moderateCount =
-        reports.where((r) => r.riskLevel == RiskLevel.yellow).length;
-    final lowCount = reports.where((r) => r.riskLevel == RiskLevel.green).length;
+    final moderateCount = reports
+        .where((r) => r.riskLevel == RiskLevel.yellow)
+        .length;
+    final lowCount = reports
+        .where((r) => r.riskLevel == RiskLevel.green)
+        .length;
     final hotspots = buildBreedingHotspots(filtered);
     final cache = ref.watch(tileCacheProvider);
 
@@ -219,13 +240,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             onPressed: _downloading ? null : () => _downloadVisible(cache),
             icon: const Icon(Icons.download_outlined),
           ),
+          const ThemeModeButton(),
         ],
       ),
       floatingActionButton: FloatingActionButton.small(
         heroTag: 'map_my_location',
         tooltip: 'My location',
-        backgroundColor: AppColors.surface,
-        foregroundColor: AppColors.primary,
+        backgroundColor: context.aridSurface,
+        foregroundColor: Theme.of(context).colorScheme.primary,
         onPressed: _centering ? null : () => _centerOnUser(announce: true),
         child: _centering
             ? const SizedBox(
@@ -237,78 +259,80 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       ),
       body: Column(
         children: [
-          Theme(
-            data: Theme.of(context).copyWith(
-              chipTheme: ChipTheme.of(context).copyWith(
-                backgroundColor: AppColors.mapChrome,
-                selectedColor: AppColors.primary,
-                checkmarkColor: Colors.white,
-                labelStyle: _whiteLabel,
-                secondaryLabelStyle: _whiteLabel,
-                side: BorderSide(color: Colors.white.withValues(alpha: 0.28)),
-              ),
+          Container(
+            decoration: BoxDecoration(
+              color: context.aridPanel,
+              border: Border(bottom: BorderSide(color: context.aridBorder)),
             ),
             child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-            child: Row(
-              children: [
-                FilterChip(
-                  label: Text('All (${reports.length})', style: _whiteLabel),
-                  selected: _riskFilter == null,
-                  onSelected: (_) => _selectRisk(null),
-                ),
-                const SizedBox(width: 8),
-                FilterChip(
-                  label: Text('High ($highCount)', style: _whiteLabel),
-                  selected: _riskFilter == RiskLevel.red,
-                  onSelected: (_) => _selectRisk(RiskLevel.red),
-                ),
-                const SizedBox(width: 8),
-                FilterChip(
-                  label: Text('Moderate ($moderateCount)', style: _whiteLabel),
-                  selected: _riskFilter == RiskLevel.yellow,
-                  onSelected: (_) => _selectRisk(RiskLevel.yellow),
-                ),
-                const SizedBox(width: 8),
-                FilterChip(
-                  label: Text('Low ($lowCount)', style: _whiteLabel),
-                  selected: _riskFilter == RiskLevel.green,
-                  onSelected: (_) => _selectRisk(RiskLevel.green),
-                ),
-                const SizedBox(width: 8),
-                ActionChip(
-                  label: Text(
-                    _dateFilter == null
-                        ? 'Dates'
-                        : '${DateFormat.MMMd().format(_dateFilter!.start)}–${DateFormat.MMMd().format(_dateFilter!.end)}',
-                    style: _whiteLabel,
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+              child: Row(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Text(
+                      'Risk',
+                      style: TextStyle(
+                        color: context.aridMuted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
-                  onPressed: _pickDates,
-                ),
-                const SizedBox(width: 8),
-                FilterChip(
-                  label: const Text('Markers', style: _whiteLabel),
-                  selected: _showMarkers,
-                  onSelected: (value) => setState(() => _showMarkers = value),
-                ),
-                const SizedBox(width: 8),
-                FilterChip(
-                  label: const Text('Heatmap', style: _whiteLabel),
-                  selected: _showHeatmap,
-                  onSelected: (value) => setState(() => _showHeatmap = value),
-                ),
-                const SizedBox(width: 8),
-                FilterChip(
-                  label: Text(
-                    'Hotspots (${hotspots.length})',
-                    style: _whiteLabel,
+                  FilterChip(
+                    label: Text('All ${reports.length}'),
+                    selected: _riskFilter == null,
+                    onSelected: (_) => _selectRisk(null),
                   ),
-                  selected: _showHotspots,
-                  onSelected: (value) => setState(() => _showHotspots = value),
-                ),
-              ],
-            ),
+                  const SizedBox(width: 8),
+                  FilterChip(
+                    label: Text('High $highCount'),
+                    selected: _riskFilter == RiskLevel.red,
+                    onSelected: (_) => _selectRisk(RiskLevel.red),
+                  ),
+                  const SizedBox(width: 8),
+                  FilterChip(
+                    label: Text('Moderate $moderateCount'),
+                    selected: _riskFilter == RiskLevel.yellow,
+                    onSelected: (_) => _selectRisk(RiskLevel.yellow),
+                  ),
+                  const SizedBox(width: 8),
+                  FilterChip(
+                    label: Text('Low $lowCount'),
+                    selected: _riskFilter == RiskLevel.green,
+                    onSelected: (_) => _selectRisk(RiskLevel.green),
+                  ),
+                  const SizedBox(width: 8),
+                  ActionChip(
+                    label: Text(
+                      _dateFilter == null
+                          ? 'Dates'
+                          : '${DateFormat.MMMd().format(_dateFilter!.start)}–${DateFormat.MMMd().format(_dateFilter!.end)}',
+                    ),
+                    onPressed: _pickDates,
+                  ),
+                  const SizedBox(width: 8),
+                  FilterChip(
+                    label: const Text('Markers'),
+                    selected: _showMarkers,
+                    onSelected: (value) => setState(() => _showMarkers = value),
+                  ),
+                  const SizedBox(width: 8),
+                  FilterChip(
+                    label: const Text('Heatmap'),
+                    selected: _showHeatmap,
+                    onSelected: (value) => setState(() => _showHeatmap = value),
+                  ),
+                  const SizedBox(width: 8),
+                  FilterChip(
+                    label: Text('Hotspots (${hotspots.length})'),
+                    selected: _showHotspots,
+                    onSelected: (value) =>
+                        setState(() => _showHotspots = value),
+                  ),
+                ],
+              ),
             ),
           ),
           if (_progress != null)
@@ -318,7 +342,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               mapController: _controller,
               options: MapOptions(
                 backgroundColor: AppColors.mapBackground,
-                initialCenter: _userLocation ??
+                initialCenter:
+                    _userLocation ??
                     (filtered.isNotEmpty
                         ? LatLng(
                             filtered.first.latitude,
@@ -412,7 +437,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (range != null) {
       setState(() => _dateFilter = range);
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        final reports = ref.read(reportsProvider).valueOrNull ?? const <Report>[];
+        final reports =
+            ref.read(reportsProvider).valueOrNull ?? const <Report>[];
         _fitToReports(_applyFilters(reports));
       });
     }
@@ -453,9 +479,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Tile download failed: $error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Tile download failed: $error')));
     } finally {
       if (mounted) {
         setState(() {
@@ -516,11 +542,11 @@ class ReportDetailSheet extends StatelessWidget {
           Text(
             'Confidence ${(report.confidenceScore * 100).toStringAsFixed(1)}%  ·  '
             '${DateFormat('MMM d, y h:mm a').format(report.capturedAt)}',
-            style: const TextStyle(color: AppColors.textSecondary),
+            style: TextStyle(color: context.aridMuted),
           ),
           Text(
             '${report.latitude.toStringAsFixed(5)}, ${report.longitude.toStringAsFixed(5)}',
-            style: const TextStyle(color: AppColors.textSecondary),
+            style: TextStyle(color: context.aridMuted),
           ),
         ],
       ),

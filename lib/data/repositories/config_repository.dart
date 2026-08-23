@@ -24,13 +24,16 @@ class ConfigRepository {
     ConfigKeys.studyEast: '121.0800',
     ConfigKeys.cloudinaryCloudName: 'dhoi760j1',
     ConfigKeys.cloudinaryUploadPreset: 'arid_unsigned',
+    ConfigKeys.themeMode: 'system',
   };
 
   Future<void> ensureDefaults() async {
     await _isar.writeTxn(() async {
       for (final entry in _defaults.entries) {
-        final existing =
-            await _isar.appConfigs.filter().keyEqualTo(entry.key).findFirst();
+        final existing = await _isar.appConfigs
+            .filter()
+            .keyEqualTo(entry.key)
+            .findFirst();
         if (existing == null) {
           await _isar.appConfigs.put(
             AppConfig()
@@ -57,8 +60,10 @@ class ConfigRepository {
 
   Future<void> set(String key, String value) async {
     await _isar.writeTxn(() async {
-      final existing =
-          await _isar.appConfigs.filter().keyEqualTo(key).findFirst();
+      final existing = await _isar.appConfigs
+          .filter()
+          .keyEqualTo(key)
+          .findFirst();
       if (existing == null) {
         await _isar.appConfigs.put(
           AppConfig()
@@ -78,7 +83,10 @@ class ConfigRepository {
         ConfigKeys.highConfidenceThreshold,
         fallback: 0.70,
       ),
-      completeReport: await getInt(ConfigKeys.completeReportPoints, fallback: 10),
+      completeReport: await getInt(
+        ConfigKeys.completeReportPoints,
+        fallback: 10,
+      ),
       breedingBonus: await getInt(ConfigKeys.breedingBonus, fallback: 5),
       highConfidenceBonus: await getInt(
         ConfigKeys.highConfidenceBonus,
@@ -98,7 +106,8 @@ class ConfigRepository {
 class ConfigKeys {
   ConfigKeys._();
 
-  static const highConfidenceThreshold = 'classification.highConfidenceThreshold';
+  static const highConfidenceThreshold =
+      'classification.highConfidenceThreshold';
   static const completeReportPoints = 'points.completeReport';
   static const breedingBonus = 'points.breedingBonus';
   static const highConfidenceBonus = 'points.highConfidenceBonus';
@@ -115,4 +124,5 @@ class ConfigKeys {
   static const cloudinaryUploadPreset = 'media.cloudinaryUploadPreset';
   static const locationOnboardingDone = 'onboarding.locationDone';
   static const mockSeedVersion = 'mock.seedVersion';
+  static const themeMode = 'appearance.themeMode';
 }

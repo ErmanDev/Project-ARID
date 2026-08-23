@@ -8,6 +8,7 @@ import '../../../providers.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/arid_logo.dart';
 import '../../widgets/common.dart';
+import '../../widgets/theme_mode_button.dart';
 import '../rewards/rewards_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -21,9 +22,17 @@ class HomeScreen extends ConsumerWidget {
     final pending = reports
         .where((r) => r.syncStatus != SyncStatus.synced)
         .length;
+    final high = reports.where((r) => r.riskLevel == RiskLevel.red).length;
+    final moderate = reports
+        .where((r) => r.riskLevel == RiskLevel.yellow)
+        .length;
+    final low = reports.where((r) => r.riskLevel == RiskLevel.green).length;
 
     return Scaffold(
-      appBar: AppBar(title: const AridBrandTitle()),
+      appBar: AppBar(
+        title: const AridBrandTitle(),
+        actions: const [ThemeModeButton()],
+      ),
       body: Column(
         children: [
           OfflineBanner(online: online),
@@ -32,15 +41,32 @@ class HomeScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(16),
               children: [
                 Text(
-                  'Autonomous Risk Identification',
-                  style: Theme.of(context).textTheme.titleMedium,
+                  'FIELD OVERVIEW',
+                  style: TextStyle(
+                    color: context.aridMuted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  'Local activity',
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  'On-device dengue vector breeding-site mapping. Everything on this screen is local.',
-                  style: TextStyle(color: AppColors.textSecondary),
+                Text(
+                  'Reports, classification, GPS tags, and points remain available without a connection.',
+                  style: TextStyle(color: context.aridMuted),
                 ),
                 const SizedBox(height: 16),
+                _RiskSnapshot(
+                  total: reports.length,
+                  high: high,
+                  moderate: moderate,
+                  low: low,
+                ),
+                const SizedBox(height: 12),
                 SectionCard(
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const RewardsScreen()),
@@ -70,14 +96,12 @@ class HomeScreen extends ConsumerWidget {
                             ),
                             Text(
                               '${profile?.reportCount ?? 0} reports  ·  ${profile?.verifiedPoints ?? 0} verified',
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
-                              ),
+                              style: TextStyle(color: context.aridMuted),
                             ),
                           ],
                         ),
                       ),
-                      const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+                      Icon(Icons.chevron_right, color: context.aridMuted),
                     ],
                   ),
                 ),
@@ -100,16 +124,13 @@ class HomeScreen extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 20),
-                Text(
-                  'Recent reports',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
+                const _SectionLabel('Recent reports'),
                 const SizedBox(height: 8),
                 if (reports.isEmpty)
-                  const SectionCard(
+                  SectionCard(
                     child: Text(
                       'No reports yet. Open Capture to photograph a possible breeding site. Classification, GPS, and points all save on this device.',
-                      style: TextStyle(color: AppColors.textSecondary),
+                      style: TextStyle(color: context.aridMuted),
                     ),
                   )
                 else
@@ -119,6 +140,131 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: TextStyle(
+        color: context.aridInk,
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+  }
+}
+
+class _RiskSnapshot extends StatelessWidget {
+  const _RiskSnapshot({
+    required this.total,
+    required this.high,
+    required this.moderate,
+    required this.low,
+  });
+
+  final int total;
+  final int high;
+  final int moderate;
+  final int low;
+
+  @override
+  Widget build(BuildContext context) {
+    return SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$total', style: Theme.of(context).textTheme.headlineSmall),
+          const SizedBox(height: 2),
+          Text(
+            'reports on this device',
+            style: TextStyle(color: context.aridMuted, fontSize: 13),
+          ),
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: SizedBox(
+              height: 6,
+              child: total == 0
+                  ? ColoredBox(color: context.aridSunken)
+                  : Row(
+                      children: [
+                        if (high > 0)
+                          Expanded(
+                            flex: high,
+                            child: const ColoredBox(color: AppColors.riskRed),
+                          ),
+                        if (moderate > 0)
+                          Expanded(
+                            flex: moderate,
+                            child: const ColoredBox(
+                              color: AppColors.riskYellow,
+                            ),
+                          ),
+                        if (low > 0)
+                          Expanded(
+                            flex: low,
+                            child: const ColoredBox(color: AppColors.riskGreen),
+                          ),
+                      ],
+                    ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _RiskRow(label: 'High risk', value: high, color: AppColors.riskRed),
+          const SizedBox(height: 8),
+          _RiskRow(
+            label: 'Moderate',
+            value: moderate,
+            color: AppColors.riskYellow,
+          ),
+          const SizedBox(height: 8),
+          _RiskRow(label: 'Low risk', value: low, color: AppColors.riskGreen),
+        ],
+      ),
+    );
+  }
+}
+
+class _RiskRow extends StatelessWidget {
+  const _RiskRow({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final String label;
+  final int value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(color: context.aridMuted, fontSize: 13),
+          ),
+        ),
+        Text(
+          '$value',
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+        ),
+      ],
     );
   }
 }
@@ -137,7 +283,7 @@ class _StatTile extends StatelessWidget {
         children: [
           Text(value, style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: AppColors.textSecondary)),
+          Text(label, style: TextStyle(color: context.aridMuted)),
         ],
       ),
     );
@@ -171,10 +317,7 @@ class _HomeReportTile extends StatelessWidget {
                   ),
                   Text(
                     DateFormat('MMM d, h:mm a').format(report.capturedAt),
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: context.aridMuted, fontSize: 12),
                   ),
                 ],
               ),

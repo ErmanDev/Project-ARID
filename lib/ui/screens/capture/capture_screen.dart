@@ -8,6 +8,7 @@ import '../../../providers.dart';
 import '../../../services/location/location_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/common.dart';
+import '../../widgets/theme_mode_button.dart';
 import 'pin_drop_screen.dart';
 import 'result_screen.dart';
 
@@ -35,14 +36,14 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
         CaptureInput(sourceFile: file, manualFix: manualFix),
       );
       if (!mounted) return;
-      await Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => ResultScreen(outcome: outcome)),
-      );
+      await Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => ResultScreen(outcome: outcome)));
     } on GpsRequiredException {
       if (!mounted) return;
-      final fix = await Navigator.of(context).push<GpsFix>(
-        MaterialPageRoute(builder: (_) => const PinDropScreen()),
-      );
+      final fix = await Navigator.of(
+        context,
+      ).push<GpsFix>(MaterialPageRoute(builder: (_) => const PinDropScreen()));
       if (fix != null && mounted) {
         await _process(file, manualFix: fix);
         return;
@@ -56,9 +57,9 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
       }
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not save report: $error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not save report: $error')));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -102,11 +103,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     await _start(pick);
   }
 
-  Future<bool?> _showMessage(
-    String title,
-    String body, {
-    String? action,
-  }) {
+  Future<bool?> _showMessage(String title, String body, {String? action}) {
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -130,24 +127,27 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Capture')),
+      appBar: AppBar(
+        title: const Text('Capture'),
+        actions: const [ThemeModeButton()],
+      ),
       body: Stack(
         children: [
           ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              const Text(
+              Text(
                 'Photograph a possible breeding site. Classification runs on this device — no internet required.',
-                style: TextStyle(color: AppColors.textSecondary),
+                style: TextStyle(color: context.aridMuted),
               ),
               const SizedBox(height: 20),
               FilledButton.icon(
                 onPressed: _busy
                     ? null
                     : () => _explainLocationThenCapture(
-                          ref.read(imageServiceProvider).pickFromCamera,
-                          camera: true,
-                        ),
+                        ref.read(imageServiceProvider).pickFromCamera,
+                        camera: true,
+                      ),
                 icon: const Icon(Icons.photo_camera_outlined),
                 label: const Text('Take photo'),
               ),
@@ -156,38 +156,42 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
                 onPressed: _busy
                     ? null
                     : () => _explainLocationThenCapture(
-                          ref.read(imageServiceProvider).pickFromGallery,
-                        ),
+                        ref.read(imageServiceProvider).pickFromGallery,
+                      ),
                 icon: const Icon(Icons.photo_library_outlined),
                 label: const Text('Choose from gallery'),
               ),
               const SizedBox(height: 24),
-              const SectionCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'What happens next',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      '1. On-device TFLite classification\n'
-                      '2. GPS tag (or manual pin if the signal fails)\n'
-                      '3. Saved to local storage immediately\n'
-                      '4. Provisional points awarded instantly',
-                      style: TextStyle(color: AppColors.textSecondary, height: 1.5),
-                    ),
-                  ],
+              SectionCard(
+                child: Builder(
+                  builder: (context) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'What happens next',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        '1. On-device TFLite classification\n'
+                        '2. GPS tag (or manual pin if the signal fails)\n'
+                        '3. Saved to local storage immediately\n'
+                        '4. Provisional points awarded instantly',
+                        style: TextStyle(color: context.aridMuted, height: 1.5),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
           if (_busy)
-            const ColoredBox(
-              color: Color(0x99F5F5F3),
+            ColoredBox(
+              color: Theme.of(
+                context,
+              ).scaffoldBackgroundColor.withValues(alpha: 0.78),
               child: Center(
-                child: Column(
+                child: const Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     CircularProgressIndicator(),

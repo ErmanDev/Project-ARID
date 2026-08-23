@@ -7,6 +7,7 @@ import '../../../data/repositories/config_repository.dart';
 import '../../../providers.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/common.dart';
+import '../../widgets/theme_mode_button.dart';
 import '../rewards/rewards_screen.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -59,7 +60,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final matrix = ref.watch(evaluationExportProvider).matrix(reports);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: AppBar(
+        title: const Text('Profile'),
+        actions: const [ThemeModeButton()],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -84,7 +88,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           await ref.read(userRepositoryProvider).save(profile);
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Name saved on this device.')),
+                            const SnackBar(
+                              content: Text('Name saved on this device.'),
+                            ),
                           );
                         },
                   child: const Text('Save name'),
@@ -92,41 +98,41 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 const SizedBox(height: 12),
                 Text(
                   'Device ID: ${profile?.id ?? '—'}',
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: context.aridMuted, fontSize: 12),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 12),
           ListTile(
-            tileColor: AppColors.surface,
+            tileColor: context.aridSurface,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
-              side: const BorderSide(color: AppColors.divider),
+              side: BorderSide(color: context.aridBorder),
             ),
-            leading: const Icon(Icons.stars_outlined, color: AppColors.secondary),
+            leading: const Icon(
+              Icons.stars_outlined,
+              color: AppColors.secondary,
+            ),
             title: const Text('Rewards & points'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const RewardsScreen()),
-            ),
+            onTap: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const RewardsScreen())),
           ),
           const SizedBox(height: 12),
           SectionCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Photo hosting (Cloudinary, free)',
                   style: TextStyle(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Firebase Storage is not used. Create a free Cloudinary account (no credit card), add an Unsigned upload preset, then paste the cloud name and preset here. Photos still save on-device first.',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                  style: TextStyle(color: context.aridMuted, fontSize: 12),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -147,20 +153,26 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 const SizedBox(height: 12),
                 FilledButton(
                   onPressed: () async {
-                    await ref.read(configRepositoryProvider).set(
-                      ConfigKeys.cloudinaryCloudName,
-                      _cloudName.text.trim(),
-                    );
-                    await ref.read(configRepositoryProvider).set(
-                      ConfigKeys.cloudinaryUploadPreset,
-                      _uploadPreset.text.trim().isEmpty
-                          ? 'arid_unsigned'
-                          : _uploadPreset.text.trim(),
-                    );
+                    await ref
+                        .read(configRepositoryProvider)
+                        .set(
+                          ConfigKeys.cloudinaryCloudName,
+                          _cloudName.text.trim(),
+                        );
+                    await ref
+                        .read(configRepositoryProvider)
+                        .set(
+                          ConfigKeys.cloudinaryUploadPreset,
+                          _uploadPreset.text.trim().isEmpty
+                              ? 'arid_unsigned'
+                              : _uploadPreset.text.trim(),
+                        );
                     if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Cloudinary settings saved on this device.'),
+                        content: Text(
+                          'Cloudinary settings saved on this device.',
+                        ),
                       ),
                     );
                   },
@@ -174,20 +186,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Cloud sync',
                   style: TextStyle(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Sync never blocks capture or map. Metadata goes to Firestore; photos go to Cloudinary. If either is missing, reports stay queued locally.',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                  style: TextStyle(color: context.aridMuted, fontSize: 12),
                 ),
                 const SizedBox(height: 12),
                 FilledButton(
                   onPressed: () async {
-                    final result =
-                        await ref.read(syncServiceProvider).syncPending();
+                    final result = await ref
+                        .read(syncServiceProvider)
+                        .syncPending();
                     if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -216,7 +229,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 Text(
                   'Labeled ${matrix.labeled}  ·  TP ${matrix.tp}  TN ${matrix.tn}  FP ${matrix.fp}  FN ${matrix.fn}\n'
                   'Accuracy ${(matrix.accuracy * 100).toStringAsFixed(1)}%  ·  unlabeled ${matrix.unlabeled}',
-                  style: const TextStyle(color: AppColors.textSecondary),
+                  style: TextStyle(color: context.aridMuted),
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton(

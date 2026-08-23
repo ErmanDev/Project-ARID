@@ -11,10 +11,26 @@ class RiskBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = switch (level) {
-      RiskLevel.red => AppColors.riskRed,
-      RiskLevel.yellow => AppColors.riskYellow,
-      RiskLevel.green => AppColors.riskGreen,
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final (tint, edge, ink, dot) = switch (level) {
+      RiskLevel.red => (
+        dark ? const Color(0xFF402428) : AppColors.riskRedTint,
+        dark ? const Color(0xFF75434A) : AppColors.riskRedEdge,
+        dark ? const Color(0xFFFFB7BC) : AppColors.riskRedInk,
+        dark ? const Color(0xFFE06A72) : AppColors.riskRed,
+      ),
+      RiskLevel.yellow => (
+        dark ? const Color(0xFF3D3020) : AppColors.riskYellowTint,
+        dark ? const Color(0xFF6D5632) : AppColors.riskYellowEdge,
+        dark ? const Color(0xFFF0CB88) : AppColors.riskYellowInk,
+        dark ? const Color(0xFFD6AA58) : AppColors.riskYellow,
+      ),
+      RiskLevel.green => (
+        dark ? const Color(0xFF23372A) : AppColors.riskGreenTint,
+        dark ? const Color(0xFF45654C) : AppColors.riskGreenEdge,
+        dark ? const Color(0xFFB7DDBD) : AppColors.riskGreenInk,
+        dark ? const Color(0xFF82B48A) : AppColors.riskGreen,
+      ),
     };
     final label = switch (level) {
       RiskLevel.red => 'High risk',
@@ -27,18 +43,28 @@ class RiskBadge extends StatelessWidget {
         vertical: compact ? 3 : 5,
       ),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.16),
+        color: tint,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color),
+        border: Border.all(color: edge),
       ),
-      child: Text(
-        compact ? level.name.toUpperCase() : label,
-        style: TextStyle(
-          color: color,
-          fontSize: compact ? 11 : 12,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.2,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: ink,
+              fontSize: compact ? 11 : 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -51,6 +77,7 @@ class SyncStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final (label, icon) = switch (status) {
       SyncStatus.pendingUpload => ('Pending', Icons.cloud_upload_outlined),
       SyncStatus.uploading => ('Syncing', Icons.sync),
@@ -60,12 +87,12 @@ class SyncStatusChip extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14, color: AppColors.textSecondary),
+        Icon(icon, size: 14, color: colors.onSurfaceVariant),
         const SizedBox(width: 4),
         Text(
           label,
-          style: const TextStyle(
-            color: AppColors.textSecondary,
+          style: TextStyle(
+            color: colors.onSurfaceVariant,
             fontSize: 12,
             fontWeight: FontWeight.w500,
           ),
@@ -82,17 +109,36 @@ class OfflineBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
-      color: online
-          ? AppColors.secondary.withValues(alpha: 0.12)
-          : AppColors.primary.withValues(alpha: 0.10),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerLow,
+        border: Border(bottom: BorderSide(color: colors.outlineVariant)),
+      ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Text(
-        online
-            ? 'Online'
-            : 'Offline',
-        style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: online ? AppColors.secondary : AppColors.riskYellow,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            online
+                ? 'Online · ready to sync'
+                : 'Offline · working from local data',
+            style: TextStyle(
+              color: colors.onSurfaceVariant,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -112,10 +158,9 @@ class SectionCard extends StatelessWidget {
       child: child,
     );
     return Card(
+      elevation: 1,
       clipBehavior: Clip.antiAlias,
-      child: onTap == null
-          ? content
-          : InkWell(onTap: onTap, child: content),
+      child: onTap == null ? content : InkWell(onTap: onTap, child: content),
     );
   }
 }
