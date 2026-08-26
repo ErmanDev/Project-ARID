@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { areaById, DEFAULT_AREA_ID, inArea } from '../areas'
 import { useAuth } from '../auth'
 import { FilterBar } from '../components/FilterBar'
 import { buildHotspots } from '../components/HotspotLayer'
-import { IconInfo, IconOffline, IconPin } from '../components/icons'
+import { IconInfo, IconOffline, IconPin, IconScan } from '../components/icons'
 import { Leaderboard } from '../components/Leaderboard'
 import { LiveMap } from '../components/LiveMap'
 import { ReportDetail } from '../components/ReportDetail'
 import { StatsPanel, StatsPanelSkeleton } from '../components/StatsPanel'
-import { Alert, Button, EmptyState, SectionHeading, Skeleton } from '../components/ui'
+import { Alert, Button, buttonClasses, EmptyState, SectionHeading, Skeleton } from '../components/ui'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { formatAgo } from '../format'
 import { useOnline, useReports, useUsers } from '../hooks'
@@ -157,6 +157,10 @@ export function MonitorPage() {
         </div>
         <div className="flex items-center gap-4">
           <LiveStatus online={online} updatedAt={updatedAt} />
+          <Link to="/analyze" className={buttonClasses('secondary', 'sm')}>
+            <IconScan size={16} />
+            Analyze image
+          </Link>
           <ThemeToggle />
           {useMockData ? (
             <span className="rounded-full border border-border bg-sunken px-2 py-0.5 text-xs font-medium text-ink-2">

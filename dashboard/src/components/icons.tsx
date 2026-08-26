@@ -308,3 +308,29 @@ export function IconMonitor(props: IconProps) {
     </Svg>
   )
 }
+
+export function IconUpload(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M12 16V4M7.5 8.5 12 4l4.5 4.5" />
+      <path d="M4 14.5V19a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 20 19v-4.5" />
+    </Svg>
+  )
+}
+
+export function IconScan(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3" />
+      <circle cx="12" cy="12" r="3.25" />
+    </Svg>
+  )
+}
+
+export function IconArrowLeft(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="m10 6-6 6 6 6M4 12h16" />
+    </Svg>
+  )
+}
