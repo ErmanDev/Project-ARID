@@ -327,6 +327,31 @@ export function IconScan(props: IconProps) {
   )
 }
 
+/**
+ * Mosquito, head lower-left, wings fanned up-right. Built from the silhouette
+ * cues that survive at 16-18px — needle proboscis, two swept wings, bent legs —
+ * with the abdomen left as a single taper. Segment ticks and a second antenna
+ * were tried and removed: below 20px they close up into noise.
+ * Wings are rotated ellipses rather than hand-fitted béziers so both tips land
+ * exactly on the thorax.
+ */
+export function IconMosquito(props: IconProps) {
+  return (
+    <Svg {...props}>
+      {/* proboscis + head */}
+      <path d="M2.6 13.1 6.6 10.5" />
+      <circle cx="8.1" cy="9.6" r="1.6" />
+      {/* abdomen */}
+      <path d="M9.5 10.1c2.9 1.2 6.2 2.9 9 4.6" />
+      {/* wings */}
+      <ellipse cx="14.2" cy="7.4" rx="5" ry="1.9" transform="rotate(-28 14.2 7.4)" />
+      <ellipse cx="14.6" cy="10.2" rx="4.6" ry="1.7" transform="rotate(-8 14.6 10.2)" />
+      {/* legs */}
+      <path d="M11 10.7 9.6 15.3l-2.2 1.9M13.5 11.9 13.1 16.8l-1.6 2.3M16 13.2 17.2 17.6l-.7 2.6" />
+    </Svg>
+  )
+}
+
 export function IconArrowLeft(props: IconProps) {
   return (
     <Svg {...props}>
