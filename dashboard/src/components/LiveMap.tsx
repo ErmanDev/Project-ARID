@@ -50,12 +50,12 @@ function FitBounds({ area, reports }: { area: Area; reports: Report[] }) {
   return null
 }
 
-const LEGEND: RiskLevel[] = ['red', 'yellow', 'green']
+const LEGEND: RiskLevel[] = ['red', 'yellow', 'blue']
 
 const LEGEND_SWATCH: Record<RiskLevel, string> = {
   red: 'bg-risk-red-solid',
   yellow: 'bg-risk-yellow-solid',
-  green: 'bg-risk-green-solid',
+  blue: 'bg-risk-blue-solid',
 }
 
 type Props = {
@@ -100,22 +100,23 @@ export function LiveMap({
         />
         <FitBounds area={area} reports={reports} />
 
-        {/* Study-area boundary: a dashed hairline, not a tinted slab. The fill
-            used to compete with the heatmap it sits under. */}
-        <Rectangle
-          bounds={[
-            [area.south, area.west],
-            [area.north, area.east],
-          ]}
-          pathOptions={{
-            color: accent,
-            weight: 1.5,
-            dashArray: '6 6',
-            fillColor: accent,
-            fillOpacity: resolved === 'dark' ? 0.05 : 0.03,
-            interactive: false,
-          }}
-        />
+        {/* Study-area boundary: hidden for the nationwide view. */}
+        {area.id !== 'all-locations' ? (
+          <Rectangle
+            bounds={[
+              [area.south, area.west],
+              [area.north, area.east],
+            ]}
+            pathOptions={{
+              color: accent,
+              weight: 1.5,
+              dashArray: '6 6',
+              fillColor: accent,
+              fillOpacity: resolved === 'dark' ? 0.05 : 0.03,
+              interactive: false,
+            }}
+          />
+        ) : null}
 
         {showHeatmap ? <HeatLayer reports={reports} /> : null}
         {showHotspots ? <HotspotLayer reports={reports} /> : null}

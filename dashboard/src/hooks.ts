@@ -29,8 +29,13 @@ function parseReport(id: string, data: DocumentData): Report | null {
     ? 'nonBreeding'
     : 'breeding'
   const risk = asString(data.riskLevel)
+  // Legacy synced docs used "green" for non-breeding; normalize to blue.
   const riskLevel: RiskLevel =
-    risk === 'red' || risk === 'yellow' || risk === 'green' ? risk : 'yellow'
+    risk === 'red' || risk === 'yellow' || risk === 'blue'
+      ? risk
+      : risk === 'green'
+        ? 'blue'
+        : 'yellow'
   const sync = asString(data.syncStatus, 'synced')
   const syncStatus: SyncStatus =
     sync === 'pendingUpload' || sync === 'uploading' || sync === 'failed' || sync === 'synced'

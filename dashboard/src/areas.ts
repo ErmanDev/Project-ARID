@@ -3,8 +3,16 @@ import type { Area } from './types'
 /** Matches the mobile app's default study bounding box. */
 export const AREAS: Area[] = [
   {
+    id: 'all-locations',
+    name: 'All locations',
+    south: 4.5,
+    west: 116.0,
+    north: 21.5,
+    east: 127.0,
+  },
+  {
     id: 'study-area',
-    name: 'Primary study area',
+    name: 'Primary study area (Metro Manila)',
     south: 14.55,
     west: 120.97,
     north: 14.70,
@@ -28,7 +36,7 @@ export const AREAS: Area[] = [
   },
 ]
 
-export const DEFAULT_AREA_ID = 'study-area'
+export const DEFAULT_AREA_ID = 'all-locations'
 
 export function areaById(id: string): Area {
   return AREAS.find((area) => area.id === id) ?? AREAS[0]

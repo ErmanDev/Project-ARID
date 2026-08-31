@@ -1,5 +1,5 @@
-/** Flip to false in `.env` when Firestore reports should drive the dashboard. */
-export const useMockData = import.meta.env.VITE_USE_MOCK_DATA !== 'false'
+/** Set `VITE_USE_MOCK_DATA=true` in `.env` for sample map/stats without Firestore. */
+export const useMockData = import.meta.env.VITE_USE_MOCK_DATA === 'true'
 
 /**
  * Whether the mock session counts as staff. Set `VITE_MOCK_STAFF=false` to work

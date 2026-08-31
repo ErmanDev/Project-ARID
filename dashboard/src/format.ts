@@ -13,14 +13,14 @@ import type { ResolvedTheme } from './theme'
  * both: the light pins disappear on a dark basemap.
  */
 const RISK_COLOR_BY_THEME: Record<ResolvedTheme, Record<RiskLevel, string>> = {
-  light: { red: '#ac3d47', yellow: '#946d1d', green: '#497d4b' },
-  dark: { red: '#de5a63', yellow: '#d7a955', green: '#6fb171' },
+  light: { red: '#ac3d47', yellow: '#946d1d', blue: '#3d6e9e' },
+  dark: { red: '#de5a63', yellow: '#d7a955', blue: '#6ba3d0' },
 }
 
 /** Base hues for large translucent fills (hotspot discs, study area). */
 const RISK_FILL_BY_THEME: Record<ResolvedTheme, Record<RiskLevel, string>> = {
-  light: { red: '#b5555a', yellow: '#c9a66b', green: '#7c9c7c' },
-  dark: { red: '#d15a61', yellow: '#c29647', green: '#62a164' },
+  light: { red: '#b5555a', yellow: '#c9a66b', blue: '#5b8db8' },
+  dark: { red: '#d15a61', yellow: '#c29647', blue: '#4a7fa8' },
 }
 
 export function riskColor(level: RiskLevel, theme: ResolvedTheme): string {
@@ -31,10 +31,17 @@ export function riskFill(level: RiskLevel, theme: ResolvedTheme): string {
   return RISK_FILL_BY_THEME[theme][level]
 }
 
+const cartoBasemapKey = import.meta.env.VITE_CARTO_API_KEY?.trim() ?? ''
+
+function cartoTileUrl(style: 'light_all' | 'dark_all'): string {
+  const base = `https://basemaps.cartocdn.com/${style}/{z}/{x}/{y}.png`
+  return cartoBasemapKey ? `${base}?key=${encodeURIComponent(cartoBasemapKey)}` : base
+}
+
 /** CARTO basemaps. Dark tiles for dark mode, or the map fights the shell. */
 export const TILE_URL: Record<ResolvedTheme, string> = {
-  light: 'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-  dark: 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+  light: cartoTileUrl('light_all'),
+  dark: cartoTileUrl('dark_all'),
 }
 
 /** Study-area boundary, and the pin keyline, per theme. */

@@ -7,12 +7,12 @@ type Props = {
   filters: Filters
   onChange: (next: Filters) => void
   hotspotCount: number
-  counts: { all: number; red: number; yellow: number; green: number }
+  counts: { all: number; red: number; yellow: number; blue: number }
 }
 
 type RiskChoice = 'all' | RiskLevel
 
-const ALL_RISKS: RiskLevel[] = ['red', 'yellow', 'green']
+const ALL_RISKS: RiskLevel[] = ['red', 'yellow', 'blue']
 
 function Group({
   label,
@@ -53,7 +53,7 @@ export function FilterBar({ filters, onChange, hotspotCount, counts }: Props) {
       meta: counts.yellow,
       title: 'Moderate risk only',
     },
-    { value: 'green', label: 'Low', meta: counts.green, title: 'Low risk only' },
+    { value: 'blue', label: 'Non-breeding', meta: counts.blue, title: 'Non-breeding only' },
   ]
 
   return (

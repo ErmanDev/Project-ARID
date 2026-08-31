@@ -1,5 +1,5 @@
 export type Classification = 'breeding' | 'nonBreeding'
-export type RiskLevel = 'red' | 'yellow' | 'green'
+export type RiskLevel = 'red' | 'yellow' | 'blue'
 export type SyncStatus = 'pendingUpload' | 'uploading' | 'synced' | 'failed'
 export type ReviewStatus = 'unreviewed' | 'reviewed' | 'actioned'
 

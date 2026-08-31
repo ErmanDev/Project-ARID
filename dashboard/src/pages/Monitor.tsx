@@ -18,7 +18,7 @@ import type { Filters, Report } from '../types'
 
 const INITIAL: Filters = {
   areaId: DEFAULT_AREA_ID,
-  risks: ['red', 'yellow', 'green'],
+  risks: ['red', 'yellow', 'blue'],
   classification: 'all',
   range: 'all',
   showMarkers: true,
@@ -111,7 +111,7 @@ export function MonitorPage() {
       all: inScope.length,
       red: inScope.filter((report) => report.riskLevel === 'red').length,
       yellow: inScope.filter((report) => report.riskLevel === 'yellow').length,
-      green: inScope.filter((report) => report.riskLevel === 'green').length,
+      blue: inScope.filter((report) => report.riskLevel === 'blue').length,
     }),
     [inScope],
   )
@@ -121,6 +121,7 @@ export function MonitorPage() {
     [users],
   )
   const hotspotCount = buildHotspots(visible).length
+  const outOfScopeCount = reports.length - inScope.length
 
   // Resolved against every report, not just the visible ones, so a filter
   // change explains itself instead of silently emptying the panel.
@@ -174,7 +175,7 @@ export function MonitorPage() {
         </div>
       </header>
 
-      {useMockData || !online || error ? (
+      {useMockData || !online || error || outOfScopeCount > 0 ? (
         <div className="space-y-2 border-b border-border bg-panel px-4 py-2.5">
           {useMockData ? (
             <Alert tone="info" icon={<IconInfo size={16} />}>
@@ -193,6 +194,15 @@ export function MonitorPage() {
             <Alert tone="error" live>
               <span className="font-medium">Live updates stopped.</span> The map
               is showing the last data received. {error}
+            </Alert>
+          ) : null}
+          {outOfScopeCount > 0 ? (
+            <Alert tone="info" icon={<IconInfo size={16} />}>
+              {outOfScopeCount} synced report{outOfScopeCount === 1 ? '' : 's'}{' '}
+              {outOfScopeCount === 1 ? 'is' : 'are'} outside{' '}
+              <span className="font-medium">{area.name}</span>. Switch Scope to{' '}
+              <span className="font-medium">All locations</span> to see them on
+              the map.
             </Alert>
           ) : null}
         </div>

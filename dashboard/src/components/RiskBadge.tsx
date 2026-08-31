@@ -3,7 +3,7 @@ import type { RiskLevel } from '../types'
 const LABELS: Record<RiskLevel, string> = {
   red: 'High risk',
   yellow: 'Moderate',
-  green: 'Low risk',
+  blue: 'Non-breeding',
 }
 
 /**
@@ -23,9 +23,9 @@ const TONE: Record<RiskLevel, { box: string; dot: string }> = {
     box: 'border-risk-yellow-edge bg-risk-yellow-tint text-risk-yellow-ink',
     dot: 'bg-risk-yellow-solid',
   },
-  green: {
-    box: 'border-risk-green-edge bg-risk-green-tint text-risk-green-ink',
-    dot: 'bg-risk-green-solid',
+  blue: {
+    box: 'border-risk-blue-edge bg-risk-blue-tint text-risk-blue-ink',
+    dot: 'bg-risk-blue-solid',
   },
 }
 

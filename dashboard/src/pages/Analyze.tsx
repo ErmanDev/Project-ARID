@@ -19,6 +19,7 @@ import {
   type Detection,
   type DetectionResult,
 } from '../services/detection/yolo'
+import { classifyBreedingSite, type ClassificationResult } from '../services/detection/classifier'
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024
 
@@ -32,7 +33,7 @@ const BOX_COLORS = ['#3d8ea8', '#c9832b', '#7a72e6', '#d05a60', '#4fa27a']
 type AnalysisState =
   | { status: 'idle' }
   | { status: 'analyzing' }
-  | { status: 'complete'; result: DetectionResult }
+  | { status: 'complete'; result: DetectionResult; verdict: ClassificationResult | null }
   | { status: 'error'; message: string }
 
 function formatBytes(bytes: number): string {
@@ -131,8 +132,12 @@ export function AnalyzePage() {
     setHovered(null)
     setAnalysis({ status: 'analyzing' })
     try {
-      const result = await detectBreedingPlaces(file)
-      setAnalysis({ status: 'complete', result })
+      // The classifier is best-effort: if it fails, the YOLO result still shows.
+      const [result, verdict] = await Promise.all([
+        detectBreedingPlaces(file),
+        classifyBreedingSite(file).catch(() => null),
+      ])
+      setAnalysis({ status: 'complete', result, verdict })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'The image could not be analyzed.'
       setAnalysis({ status: 'error', message })
@@ -160,6 +165,7 @@ export function AnalyzePage() {
 
   const analyzing = analysis.status === 'analyzing'
   const result = analysis.status === 'complete' ? analysis.result : null
+  const verdict = analysis.status === 'complete' ? analysis.verdict : null
   const detections = result?.detections ?? []
   const topConfidence = detections.reduce((best, item) => Math.max(best, item.confidence), 0)
 
@@ -345,6 +351,57 @@ export function AnalyzePage() {
             </Alert>
           ) : null}
 
+          {/* Classifier verdict: the same Teachable Machine model the mobile
+              app runs, so the dashboard and app agree on Breeding vs Non
+              Breeding. Rendered above the detector because it answers the
+              question about the whole photo before the per-object boxes. */}
+          {verdict ? (
+            <section
+              role="status"
+              className={`flex items-center gap-3 rounded-panel border p-4 shadow-sm ${
+                verdict.label === 'Breeding'
+                  ? 'border-alert-edge bg-alert-tint'
+                  : 'border-border bg-risk-blue-tint'
+              }`}
+            >
+              <span
+                className={`grid size-9 shrink-0 place-items-center rounded-full text-white shadow-xs ${
+                  verdict.label === 'Breeding' ? 'bg-alert-solid' : 'bg-risk-blue-ink'
+                }`}
+              >
+                {verdict.label === 'Breeding' ? (
+                  <IconMosquito size={20} />
+                ) : (
+                  <IconCheck size={20} />
+                )}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p
+                  className={`text-base font-semibold ${
+                    verdict.label === 'Breeding' ? 'text-alert-ink' : 'text-risk-blue-ink'
+                  }`}
+                >
+                  {verdict.label === 'Breeding' ? 'Breeding site' : 'Non-breeding site'}
+                </p>
+                <p
+                  className={`mt-0.5 text-xs ${
+                    verdict.label === 'Breeding' ? 'text-alert-ink/90' : 'text-risk-blue-ink/90'
+                  }`}
+                >
+                  Same classifier as the mobile app
+                </p>
+              </div>
+              <span
+                data-numeric
+                className={`shrink-0 text-xl font-semibold ${
+                  verdict.label === 'Breeding' ? 'text-alert-ink' : 'text-risk-blue-ink'
+                }`}
+              >
+                {Math.round(verdict.confidence * 100)}%
+              </span>
+            </section>
+          ) : null}
+
           <section className="overflow-hidden rounded-panel border border-border bg-surface shadow-sm">
             <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
               <h2 className="text-sm font-semibold text-ink">Detection result</h2>
@@ -354,7 +411,7 @@ export function AnalyzePage() {
               {result && detections.length === 0 ? (
                 <span
                   data-numeric
-                  className="rounded-full bg-risk-green-tint px-2 py-0.5 text-xs font-semibold text-risk-green-ink"
+                  className="rounded-full bg-risk-blue-tint px-2 py-0.5 text-xs font-semibold text-risk-blue-ink"
                 >
                   0 found
                 </span>

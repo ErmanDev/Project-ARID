@@ -9,6 +9,7 @@ interface ImportMetaEnv {
   readonly VITE_FIREBASE_APP_ID: string
   readonly VITE_ALLOW_ANY_AUTH: string
   readonly VITE_USE_MOCK_DATA: string
+  readonly VITE_CARTO_API_KEY: string
 }
 
 interface ImportMeta {

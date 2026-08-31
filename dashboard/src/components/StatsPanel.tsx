@@ -7,7 +7,7 @@ type Stats = {
   total: number
   red: number
   yellow: number
-  green: number
+  blue: number
   last24h: number
   last7d: number
   weekDelta: number
@@ -20,7 +20,7 @@ export function computeStats(reports: Report[]): Stats {
   const startLastWeek = now - 14 * day
   let red = 0
   let yellow = 0
-  let green = 0
+  let blue = 0
   let last24h = 0
   let last7d = 0
   let thisWeek = 0
@@ -29,7 +29,7 @@ export function computeStats(reports: Report[]): Stats {
     const t = new Date(report.capturedAt).getTime()
     if (report.riskLevel === 'red') red += 1
     if (report.riskLevel === 'yellow') yellow += 1
-    if (report.riskLevel === 'green') green += 1
+    if (report.riskLevel === 'blue') blue += 1
     if (now - t <= day) last24h += 1
     if (now - t <= 7 * day) last7d += 1
     if (t >= startThisWeek) thisWeek += 1
@@ -39,7 +39,7 @@ export function computeStats(reports: Report[]): Stats {
     total: reports.length,
     red,
     yellow,
-    green,
+    blue,
     last24h,
     last7d,
     weekDelta: thisWeek - lastWeek,
@@ -49,7 +49,7 @@ export function computeStats(reports: Report[]): Stats {
 const RISK_ROWS: Array<{ level: RiskLevel; label: string; bar: string }> = [
   { level: 'red', label: 'High risk', bar: 'bg-risk-red-solid' },
   { level: 'yellow', label: 'Moderate', bar: 'bg-risk-yellow-solid' },
-  { level: 'green', label: 'Low risk', bar: 'bg-risk-green-solid' },
+  { level: 'blue', label: 'Non-breeding', bar: 'bg-risk-blue-solid' },
 ]
 
 export function StatsPanelSkeleton() {
@@ -76,7 +76,7 @@ export function StatsPanel({ reports }: { reports: Report[] }) {
   const counts: Record<RiskLevel, number> = {
     red: stats.red,
     yellow: stats.yellow,
-    green: stats.green,
+    blue: stats.blue,
   }
   const share = (value: number) =>
     stats.total === 0 ? 0 : Math.round((value / stats.total) * 100)
