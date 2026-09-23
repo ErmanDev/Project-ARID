@@ -18,7 +18,7 @@ import type { Filters, Report } from '../types'
 
 const INITIAL: Filters = {
   areaId: DEFAULT_AREA_ID,
-  risks: ['red', 'yellow', 'blue'],
+  risks: ['red', 'yellow', 'green'],
   classification: 'all',
   range: 'all',
   showMarkers: true,
@@ -111,7 +111,7 @@ export function MonitorPage() {
       all: inScope.length,
       red: inScope.filter((report) => report.riskLevel === 'red').length,
       yellow: inScope.filter((report) => report.riskLevel === 'yellow').length,
-      blue: inScope.filter((report) => report.riskLevel === 'blue').length,
+      green: inScope.filter((report) => report.riskLevel === 'green').length,
     }),
     [inScope],
   )

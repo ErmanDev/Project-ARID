@@ -35,13 +35,19 @@ function hoursAgo(hours: number): string {
 
 export const MOCK_USERS: UserProfile[] = file.users
 
+function normalizeRiskLevel(level: string): Report['riskLevel'] {
+  if (level === 'red' || level === 'yellow') return level
+  if (level === 'green' || level === 'blue') return 'green'
+  return 'yellow'
+}
+
 function toReport(row: MockReportRow): Report {
   return {
     id: row.id,
     imageUrl: row.imageUrl ?? null,
     classification: row.classification,
     confidenceScore: row.confidenceScore,
-    riskLevel: row.riskLevel,
+    riskLevel: normalizeRiskLevel(row.riskLevel),
     latitude: row.latitude,
     longitude: row.longitude,
     gpsAccuracy: row.gpsAccuracy,

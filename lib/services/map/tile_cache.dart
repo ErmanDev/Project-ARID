@@ -6,6 +6,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_map/flutter_map.dart';
+import '../../config/local_secrets.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:path/path.dart' as p;
@@ -37,9 +38,15 @@ class TileCacheService {
   TileCacheService();
 
   static const userAgent = 'ARID/1.0 (dengue-vector-mapping; thesis)';
-  static const urlTemplate =
+  static const _baseUrlTemplate =
       'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
   static const attribution = '© OpenStreetMap contributors © CARTO';
+
+  static String get urlTemplate {
+    final key = cartoBasemapKey.trim();
+    if (key.isEmpty) return _baseUrlTemplate;
+    return '$_baseUrlTemplate?key=$key';
+  }
 
   Directory? _cacheDir;
 

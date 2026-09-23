@@ -9,6 +9,7 @@ import {
 } from 'firebase/firestore'
 import { getDb } from './firebase'
 import { useMockData } from './config'
+import { readErrorMessage } from './errors'
 import { getMockReports, MOCK_USERS, updateMockReview } from './mock/data'
 import type { Classification, Report, ReviewStatus, RiskLevel, SyncStatus, UserProfile } from './types'
 
@@ -29,12 +30,12 @@ function parseReport(id: string, data: DocumentData): Report | null {
     ? 'nonBreeding'
     : 'breeding'
   const risk = asString(data.riskLevel)
-  // Legacy synced docs used "green" for non-breeding; normalize to blue.
+  // Mobile syncs non-breeding as "green"; legacy docs may still say "blue".
   const riskLevel: RiskLevel =
-    risk === 'red' || risk === 'yellow' || risk === 'blue'
+    risk === 'red' || risk === 'yellow'
       ? risk
-      : risk === 'green'
-        ? 'blue'
+      : risk === 'green' || risk === 'blue'
+        ? 'green'
         : 'yellow'
   const sync = asString(data.syncStatus, 'synced')
   const syncStatus: SyncStatus =
@@ -102,7 +103,7 @@ export function useReports(enabled: boolean) {
         setLoading(false)
       },
       (err) => {
-        setError(err.message)
+        setError(readErrorMessage(err))
         setLoading(false)
       },
     )
@@ -121,19 +122,25 @@ export function useUsers(enabled: boolean) {
       setUsers(MOCK_USERS)
       return
     }
-    const unsub = onSnapshot(collection(getDb(), 'users'), (snap) => {
-      setUsers(
-        snap.docs.map((item) => {
-          const data = item.data()
-          return {
-            id: item.id,
-            displayName: asString(data.displayName, 'Field worker'),
-            totalPoints: asNumber(data.totalPoints),
-            reportCount: asNumber(data.reportCount),
-          }
-        }),
-      )
-    })
+    const unsub = onSnapshot(
+      collection(getDb(), 'users'),
+      (snap) => {
+        setUsers(
+          snap.docs.map((item) => {
+            const data = item.data()
+            return {
+              id: item.id,
+              displayName: asString(data.displayName, 'Field worker'),
+              totalPoints: asNumber(data.totalPoints),
+              reportCount: asNumber(data.reportCount),
+            }
+          }),
+        )
+      },
+      () => {
+        // Users are optional context for the leaderboard; keep the map usable.
+      },
+    )
     return unsub
   }, [enabled])
 

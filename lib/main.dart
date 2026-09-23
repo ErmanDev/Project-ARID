@@ -25,6 +25,8 @@ Future<void> main() async {
   await config.ensureDefaults();
   if (kUseMockData) {
     await MockDataSeeder(isar, config).seedIfNeeded();
+  } else {
+    await MockDataSeeder(isar, config).purgeIfDisabled();
   }
   final tiles = TileCacheService();
   await tiles.cacheDir();

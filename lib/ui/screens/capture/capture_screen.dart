@@ -5,12 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../../providers.dart';
-import '../../../services/location/location_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/common.dart';
 import '../../widgets/theme_mode_button.dart';
-import 'pin_drop_screen.dart';
-import 'result_screen.dart';
+import 'remarks_screen.dart';
 
 class CaptureScreen extends ConsumerStatefulWidget {
   const CaptureScreen({super.key});
@@ -21,54 +19,10 @@ class CaptureScreen extends ConsumerStatefulWidget {
 
 class _CaptureScreenState extends ConsumerState<CaptureScreen> {
   bool _busy = false;
+  String? _busyLabel;
 
-  Future<void> _start(Future<File?> Function() pick) async {
+  Future<void> _start(Future<File?> Function() pick, {bool camera = false}) async {
     if (_busy) return;
-    final file = await pick();
-    if (file == null || !mounted) return;
-    await _process(file);
-  }
-
-  Future<void> _process(File file, {GpsFix? manualFix}) async {
-    setState(() => _busy = true);
-    try {
-      final outcome = await ref.read(submitReportProvider)(
-        CaptureInput(sourceFile: file, manualFix: manualFix),
-      );
-      if (!mounted) return;
-      await Navigator.of(
-        context,
-      ).push(MaterialPageRoute(builder: (_) => ResultScreen(outcome: outcome)));
-    } on GpsRequiredException {
-      if (!mounted) return;
-      final fix = await Navigator.of(
-        context,
-      ).push<GpsFix>(MaterialPageRoute(builder: (_) => const PinDropScreen()));
-      if (fix != null && mounted) {
-        await _process(file, manualFix: fix);
-        return;
-      }
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Report not saved — a GPS tag is required.'),
-          ),
-        );
-      }
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Could not save report: $error')));
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _explainLocationThenCapture(
-    Future<File?> Function() pick, {
-    bool camera = false,
-  }) async {
     if (camera) {
       final cameraStatus = await Permission.camera.request();
       if (!cameraStatus.isGranted && mounted) {
@@ -79,31 +33,61 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
         if (!cameraStatus.isGranted) return;
       }
     }
-    final location = ref.read(locationServiceProvider);
-    final outcome = await location.requestPermission();
-    if (!mounted) return;
-    if (outcome == LocationPermissionOutcome.disabled) {
-      await _showMessage(
-        'Location is turned off',
-        '${LocationService.rationale}\n\nYou can still drop a pin on the map after the photo.',
+
+    setState(() {
+      _busy = true;
+      _busyLabel = 'Updating GPS…';
+    });
+    try {
+      await ref.read(locationServiceProvider).requestPermission();
+      await ref.read(locationServiceProvider).freshFix(
+        timeout: const Duration(seconds: 10),
       );
-    } else if (outcome == LocationPermissionOutcome.permanentlyDenied) {
-      final open = await _showMessage(
-        'Location permission needed',
-        '${LocationService.rationale}\n\nOpen Settings to allow location, or drop a pin after capture.',
-        action: 'Open settings',
-      );
-      if (open == true) await openAppSettings();
-    } else if (outcome == LocationPermissionOutcome.denied) {
-      await _showMessage(
-        'Location helps the map',
-        '${LocationService.rationale}\n\nIf GPS is unavailable, you can place the pin yourself.',
-      );
+    } catch (_) {
+      // Camera can still open; confirm step will refresh again.
     }
-    await _start(pick);
+
+    if (!mounted) return;
+    setState(() => _busyLabel = camera ? 'Opening camera…' : 'Opening gallery…');
+    final file = await pick();
+    if (!mounted) return;
+    if (file == null) {
+      setState(() {
+        _busy = false;
+        _busyLabel = null;
+      });
+      return;
+    }
+    await _classify(file);
   }
 
-  Future<bool?> _showMessage(String title, String body, {String? action}) {
+  Future<void> _classify(File file) async {
+    setState(() {
+      _busy = true;
+      _busyLabel = 'Classifying on-device…';
+    });
+    try {
+      final draft = await ref.read(classifyCaptureProvider)(file);
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => RemarksScreen(draft: draft)),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not classify photo: $error')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _busyLabel = null;
+        });
+      }
+    }
+  }
+
+  Future<bool?> _showMessage(String title, String body) {
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -112,13 +96,8 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Continue'),
+            child: const Text('OK'),
           ),
-          if (action != null)
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(action),
-            ),
         ],
       ),
     );
@@ -144,7 +123,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
               FilledButton.icon(
                 onPressed: _busy
                     ? null
-                    : () => _explainLocationThenCapture(
+                    : () => _start(
                         ref.read(imageServiceProvider).pickFromCamera,
                         camera: true,
                       ),
@@ -155,9 +134,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
               OutlinedButton.icon(
                 onPressed: _busy
                     ? null
-                    : () => _explainLocationThenCapture(
-                        ref.read(imageServiceProvider).pickFromGallery,
-                      ),
+                    : () => _start(ref.read(imageServiceProvider).pickFromGallery),
                 icon: const Icon(Icons.photo_library_outlined),
                 label: const Text('Choose from gallery'),
               ),
@@ -174,9 +151,9 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
                       SizedBox(height: 8),
                       Text(
                         '1. On-device TFLite classification\n'
-                        '2. GPS tag (or manual pin if the signal fails)\n'
-                        '3. Saved to local storage immediately\n'
-                        '4. Provisional points awarded instantly',
+                        '2. Review remarks (label, confidence, risk)\n'
+                        '3. Confirm to pin your refreshed location\n'
+                        '4. Saved locally — syncs to the map when online',
                         style: TextStyle(color: context.aridMuted, height: 1.5),
                       ),
                     ],
@@ -191,12 +168,12 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
                 context,
               ).scaffoldBackgroundColor.withValues(alpha: 0.78),
               child: Center(
-                child: const Column(
+                child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 12),
-                    Text('Classifying on-device…'),
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 12),
+                    Text(_busyLabel ?? 'Working…'),
                   ],
                 ),
               ),

@@ -36,4 +36,5 @@ export function getDb(): Firestore {
   return db
 }
 
-export const allowAnyAuth = import.meta.env.VITE_ALLOW_ANY_AUTH === 'true'
+/** @deprecated Staff access is always verified against Firestore `staff/{uid}`. */
+export const allowAnyAuth = false

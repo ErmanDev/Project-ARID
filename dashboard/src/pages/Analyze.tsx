@@ -361,12 +361,12 @@ export function AnalyzePage() {
               className={`flex items-center gap-3 rounded-panel border p-4 shadow-sm ${
                 verdict.label === 'Breeding'
                   ? 'border-alert-edge bg-alert-tint'
-                  : 'border-border bg-risk-blue-tint'
+                  : 'border-risk-green-edge bg-risk-green-tint'
               }`}
             >
               <span
                 className={`grid size-9 shrink-0 place-items-center rounded-full text-white shadow-xs ${
-                  verdict.label === 'Breeding' ? 'bg-alert-solid' : 'bg-risk-blue-ink'
+                  verdict.label === 'Breeding' ? 'bg-alert-solid' : 'bg-risk-green-solid'
                 }`}
               >
                 {verdict.label === 'Breeding' ? (
@@ -378,14 +378,14 @@ export function AnalyzePage() {
               <div className="min-w-0 flex-1">
                 <p
                   className={`text-base font-semibold ${
-                    verdict.label === 'Breeding' ? 'text-alert-ink' : 'text-risk-blue-ink'
+                    verdict.label === 'Breeding' ? 'text-alert-ink' : 'text-risk-green-ink'
                   }`}
                 >
                   {verdict.label === 'Breeding' ? 'Breeding site' : 'Non-breeding site'}
                 </p>
                 <p
                   className={`mt-0.5 text-xs ${
-                    verdict.label === 'Breeding' ? 'text-alert-ink/90' : 'text-risk-blue-ink/90'
+                    verdict.label === 'Breeding' ? 'text-alert-ink/90' : 'text-risk-green-ink/90'
                   }`}
                 >
                   Same classifier as the mobile app
@@ -394,7 +394,7 @@ export function AnalyzePage() {
               <span
                 data-numeric
                 className={`shrink-0 text-xl font-semibold ${
-                  verdict.label === 'Breeding' ? 'text-alert-ink' : 'text-risk-blue-ink'
+                  verdict.label === 'Breeding' ? 'text-alert-ink' : 'text-risk-green-ink'
                 }`}
               >
                 {Math.round(verdict.confidence * 100)}%
@@ -411,7 +411,7 @@ export function AnalyzePage() {
               {result && detections.length === 0 ? (
                 <span
                   data-numeric
-                  className="rounded-full bg-risk-blue-tint px-2 py-0.5 text-xs font-semibold text-risk-blue-ink"
+                  className="rounded-full bg-risk-green-tint px-2 py-0.5 text-xs font-semibold text-risk-green-ink"
                 >
                   0 found
                 </span>

@@ -1,37 +1,30 @@
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { authErrorMessage } from '../errors'
 import { IconGoogle } from '../components/icons'
-import { Alert, Button, Field, Input } from '../components/ui'
+import { Alert, Button } from '../components/ui'
 import { ThemeToggle } from '../components/ThemeToggle'
 
 export function LoginPage() {
   const auth = useAuth()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [busy, setBusy] = useState<'email' | 'google' | null>(null)
+  const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
   if (auth.user && auth.isStaff) return <Navigate to="/" replace />
   if (auth.user && !auth.isStaff) return <Navigate to="/denied" replace />
 
-  async function run(kind: 'email' | 'google', action: () => Promise<void>) {
-    setBusy(kind)
+  async function signInWithGoogle() {
+    setBusy(true)
     setMessage(null)
     try {
-      await action()
+      await auth.signInGoogle()
     } catch (err) {
       // null means "the user cancelled" — nothing worth showing them.
       setMessage(authErrorMessage(err))
     } finally {
-      setBusy(null)
+      setBusy(false)
     }
-  }
-
-  function onSubmit(event: FormEvent) {
-    event.preventDefault()
-    void run('email', () => auth.signInEmail(email, password))
   }
 
   return (
@@ -57,63 +50,24 @@ export function LoginPage() {
               using the same project as the mobile app.
             </Alert>
           ) : (
-            <form className="mt-6 space-y-4" onSubmit={onSubmit} noValidate>
-              <Field label="Work email" id="login-email">
-                {(props) => (
-                  <Input
-                    {...props}
-                    type="email"
-                    required
-                    autoComplete="email"
-                    autoFocus
-                    placeholder="you@lgu.gov.ph"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                  />
-                )}
-              </Field>
-
-              <Field label="Password" id="login-password">
-                {(props) => (
-                  <Input
-                    {...props}
-                    type="password"
-                    required
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                  />
-                )}
-              </Field>
-
+            <div className="mt-6 space-y-4">
               {message ? (
                 <Alert tone="error" live>
                   {message}
                 </Alert>
               ) : null}
 
-              <div className="space-y-2.5 pt-1">
-                <Button
-                  type="submit"
-                  variant="primary"
-                  block
-                  loading={busy === 'email'}
-                  disabled={busy !== null}
-                >
-                  Sign in
-                </Button>
-                <Button
-                  variant="secondary"
-                  block
-                  icon={<IconGoogle size={16} />}
-                  loading={busy === 'google'}
-                  disabled={busy !== null}
-                  onClick={() => void run('google', auth.signInGoogle)}
-                >
-                  Continue with Google
-                </Button>
-              </div>
-            </form>
+              <Button
+                variant="primary"
+                block
+                icon={<IconGoogle size={16} />}
+                loading={busy}
+                disabled={busy}
+                onClick={() => void signInWithGoogle()}
+              >
+                Continue with Google
+              </Button>
+            </div>
           )}
         </div>
 

@@ -13,14 +13,14 @@ import type { ResolvedTheme } from './theme'
  * both: the light pins disappear on a dark basemap.
  */
 const RISK_COLOR_BY_THEME: Record<ResolvedTheme, Record<RiskLevel, string>> = {
-  light: { red: '#ac3d47', yellow: '#946d1d', blue: '#3d6e9e' },
-  dark: { red: '#de5a63', yellow: '#d7a955', blue: '#6ba3d0' },
+  light: { red: '#ac3d47', yellow: '#946d1d', green: '#4a7a4a' },
+  dark: { red: '#de5a63', yellow: '#d7a955', green: '#8fbf8f' },
 }
 
 /** Base hues for large translucent fills (hotspot discs, study area). */
 const RISK_FILL_BY_THEME: Record<ResolvedTheme, Record<RiskLevel, string>> = {
-  light: { red: '#b5555a', yellow: '#c9a66b', blue: '#5b8db8' },
-  dark: { red: '#d15a61', yellow: '#c29647', blue: '#4a7fa8' },
+  light: { red: '#b5555a', yellow: '#c9a66b', green: '#7c9c7c' },
+  dark: { red: '#d15a61', yellow: '#c29647', green: '#6b9080' },
 }
 
 export function riskColor(level: RiskLevel, theme: ResolvedTheme): string {

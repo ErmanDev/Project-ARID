@@ -16,9 +16,12 @@ Open the printed local URL. Sign in with an authorized staff account.
 
 ## Staff access
 
-Create a Firestore document `staff/{uid}` for each dashboard user (Console or Admin SDK). Until that exists, sign-in lands on Access denied.
+Create a Firestore document `staff/{uid}` for each dashboard user (Console, `tool/add_staff.js`, or Admin SDK). Until that exists, sign-in lands on Access denied.
 
-For local bootstrap only, set `VITE_ALLOW_ANY_AUTH=true` in `.env`.
+```bash
+# From repo root, after firebase login:
+node tool/add_staff.js <uid> [email] [displayName]
+```
 
 ### Viewing the access-denied page
 
@@ -32,7 +35,7 @@ VITE_MOCK_STAFF=false npm run dev
 Then open `/denied`. Same for `/login`, which also redirects while a mock staff
 session is active.
 
-Enable Email/Password and/or Google in Firebase Auth.
+Enable Google sign-in in Firebase Auth.
 
 ## Deploy
 

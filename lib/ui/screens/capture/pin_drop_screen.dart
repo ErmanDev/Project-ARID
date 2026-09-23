@@ -43,7 +43,7 @@ class _PinDropScreenState extends ConsumerState<PinDropScreen> {
           Padding(
             padding: EdgeInsets.all(12),
             child: Text(
-              'GPS did not resolve. Drag the map so the pin sits on the breeding site, then save. This still stores locally with no internet.',
+              'GPS did not resolve. Drag the map so the pin sits on the site, then save. This still stores locally with no internet.',
               style: TextStyle(color: context.aridMuted),
             ),
           ),
@@ -56,11 +56,14 @@ class _PinDropScreenState extends ConsumerState<PinDropScreen> {
                   options: MapOptions(
                     backgroundColor: AppColors.mapBackground,
                     initialCenter: _pin,
-                    initialZoom: 16,
-                    onPositionChanged: (position, hasGesture) {
-                      if (hasGesture) {
-                        setState(() => _pin = position.center);
+                    initialZoom: 18,
+                    onPositionChanged: (position, _) {
+                      final center = position.center;
+                      if (_pin.latitude == center.latitude &&
+                          _pin.longitude == center.longitude) {
+                        return;
                       }
+                      setState(() => _pin = center);
                     },
                   ),
                   children: [

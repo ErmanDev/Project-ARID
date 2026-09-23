@@ -55,6 +55,15 @@ class ResultScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
+                  'Risk: ${switch (report.riskLevel) {
+                    RiskLevel.red => 'High',
+                    RiskLevel.yellow => 'Moderate',
+                    RiskLevel.green => 'Non-breeding',
+                  }}',
+                  style: TextStyle(color: context.aridMuted),
+                ),
+                const SizedBox(height: 6),
+                Text(
                   '${report.latitude.toStringAsFixed(5)}, ${report.longitude.toStringAsFixed(5)}'
                   '${report.gpsManual ? '  ·  manual pin' : '  ·  ±${report.gpsAccuracy.toStringAsFixed(0)} m'}',
                   style: TextStyle(color: context.aridMuted),

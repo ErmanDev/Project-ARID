@@ -146,10 +146,31 @@ final locationOnboardingDoneProvider = FutureProvider<bool>((ref) async {
   return false;
 });
 
-class CaptureInput {
-  const CaptureInput({required this.sourceFile, this.manualFix});
+/// Classification-only draft shown before the user confirms and pins location.
+class ClassificationDraft {
+  const ClassificationDraft({
+    required this.reportId,
+    required this.imageFile,
+    required this.classification,
+    required this.confidenceScore,
+    required this.riskLevel,
+    required this.label,
+    required this.usedOnDeviceModel,
+  });
 
-  final File sourceFile;
+  final String reportId;
+  final File imageFile;
+  final Classification classification;
+  final double confidenceScore;
+  final RiskLevel riskLevel;
+  final String label;
+  final bool usedOnDeviceModel;
+}
+
+class ConfirmReportInput {
+  const ConfirmReportInput({required this.draft, this.manualFix});
+
+  final ClassificationDraft draft;
   final GpsFix? manualFix;
 }
 
@@ -165,38 +186,19 @@ class CaptureOutcome {
   final bool usedOnDeviceModel;
 }
 
-final submitReportProvider =
-    Provider<Future<CaptureOutcome> Function(CaptureInput)>((ref) {
-      return (input) async {
-        final reports = ref.read(reportRepositoryProvider);
-        final users = ref.read(userRepositoryProvider);
+final classifyCaptureProvider =
+    Provider<Future<ClassificationDraft> Function(File)>((ref) {
+      return (sourceFile) async {
         final images = ref.read(imageServiceProvider);
         final classifier = ref.read(classifierProvider);
-        final location = ref.read(locationServiceProvider);
         final rules = await ref.read(pointsRulesProvider.future);
-        final profile = await users.get();
-        if (profile == null) {
-          throw StateError('Local profile missing');
-        }
 
         final id = const Uuid().v4();
         final persisted = await images.persistReportImage(
-          source: input.sourceFile,
+          source: sourceFile,
           reportId: id,
         );
-
-        final classificationFuture = classifier.classify(persisted);
-        final gpsFuture = input.manualFix != null
-            ? Future.value(input.manualFix)
-            : location.currentFix();
-
-        final classified = await classificationFuture;
-        var gps = await gpsFuture;
-        gps ??= input.manualFix;
-        if (gps == null) {
-          throw const GpsRequiredException();
-        }
-
+        final classified = await classifier.classify(persisted);
         final risk =
             RiskMapper(
               highConfidenceThreshold: rules.highConfidenceThreshold,
@@ -205,20 +207,51 @@ final submitReportProvider =
               confidence: classified.confidenceScore,
             );
 
-        final award = PointsEngine(rules).award(
+        return ClassificationDraft(
+          reportId: id,
+          imageFile: persisted,
           classification: classified.classification,
-          confidence: classified.confidenceScore,
+          confidenceScore: classified.confidenceScore,
           riskLevel: risk,
+          label: classified.label,
+          usedOnDeviceModel: classified.usedOnDeviceModel,
+        );
+      };
+    });
+
+final confirmReportProvider =
+    Provider<Future<CaptureOutcome> Function(ConfirmReportInput)>((ref) {
+      return (input) async {
+        final reports = ref.read(reportRepositoryProvider);
+        final users = ref.read(userRepositoryProvider);
+        final location = ref.read(locationServiceProvider);
+        final rules = await ref.read(pointsRulesProvider.future);
+        final profile = await users.get();
+        if (profile == null) {
+          throw StateError('Local profile missing');
+        }
+
+        final draft = input.draft;
+        var gps = input.manualFix;
+        gps ??= await location.freshFix();
+        if (gps == null) {
+          throw const GpsRequiredException();
+        }
+
+        final award = PointsEngine(rules).award(
+          classification: draft.classification,
+          confidence: draft.confidenceScore,
+          riskLevel: draft.riskLevel,
           profile: profile,
           capturedAt: DateTime.now(),
         );
 
         final report = Report()
-          ..id = id
-          ..imagePath = persisted.path
-          ..classification = classified.classification
-          ..confidenceScore = classified.confidenceScore
-          ..riskLevel = risk
+          ..id = draft.reportId
+          ..imagePath = draft.imageFile.path
+          ..classification = draft.classification
+          ..confidenceScore = draft.confidenceScore
+          ..riskLevel = draft.riskLevel
           ..latitude = gps.latitude
           ..longitude = gps.longitude
           ..gpsAccuracy = gps.accuracy
@@ -239,7 +272,7 @@ final submitReportProvider =
         return CaptureOutcome(
           report: report,
           breakdown: award.breakdown,
-          usedOnDeviceModel: classified.usedOnDeviceModel,
+          usedOnDeviceModel: draft.usedOnDeviceModel,
         );
       };
     });

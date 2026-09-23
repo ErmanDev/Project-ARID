@@ -226,7 +226,7 @@ class _RiskSnapshot extends StatelessWidget {
             color: AppColors.riskYellow,
           ),
           const SizedBox(height: 8),
-          _RiskRow(label: 'Low risk', value: low, color: AppColors.riskGreen),
+          _RiskRow(label: 'Non-breeding', value: low, color: AppColors.riskGreen),
         ],
       ),
     );

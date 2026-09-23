@@ -26,16 +26,16 @@ class RiskBadge extends StatelessWidget {
         dark ? const Color(0xFFD6AA58) : AppColors.riskYellow,
       ),
       RiskLevel.green => (
-        dark ? const Color(0xFF23372A) : AppColors.riskGreenTint,
-        dark ? const Color(0xFF45654C) : AppColors.riskGreenEdge,
-        dark ? const Color(0xFFB7DDBD) : AppColors.riskGreenInk,
-        dark ? const Color(0xFF82B48A) : AppColors.riskGreen,
+        dark ? const Color(0xFF243028) : AppColors.riskGreenTint,
+        dark ? const Color(0xFF4A6B4A) : AppColors.riskGreenEdge,
+        dark ? const Color(0xFFB5D0B5) : AppColors.riskGreenInk,
+        dark ? const Color(0xFF8FBF8F) : AppColors.riskGreen,
       ),
     };
     final label = switch (level) {
       RiskLevel.red => 'High risk',
       RiskLevel.yellow => 'Moderate',
-      RiskLevel.green => 'Low risk',
+      RiskLevel.green => 'Non-breeding',
     };
     return Container(
       padding: EdgeInsets.symmetric(

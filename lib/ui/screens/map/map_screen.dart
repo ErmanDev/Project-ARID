@@ -37,7 +37,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   LatLng? _userLocation;
 
   static const _fallbackCenter = LatLng(14.5995, 120.9842);
-  static const _userZoom = 16.0;
+  static const _userZoom = 18.0;
   static const _tileContrast = ColorFilter.matrix(<double>[
     1.45,
     0,
@@ -72,7 +72,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     setState(() => _centering = true);
     try {
       await ref.read(locationServiceProvider).requestPermission();
-      final fix = await ref.read(locationServiceProvider).currentFix();
+      final fix = await ref.read(locationServiceProvider).freshFix();
       if (!mounted) return;
       if (fix == null) {
         if (announce) {
@@ -147,15 +147,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   Future<void> _onMapReady() async {
     _mapReady = true;
-    await _centerOnUser(move: false);
-    if (!mounted) return;
-    final reports = ref.read(reportsProvider).valueOrNull ?? const <Report>[];
-    final visible = _applyFilters(reports);
-    if (visible.isNotEmpty) {
-      _fitToReports(visible);
-    } else {
-      await _centerOnUser(move: true);
-    }
+    await _centerOnUser(move: true);
   }
 
   List<CircleMarker> _heatCircles(List<Report> reports) {
@@ -245,7 +237,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       ),
       floatingActionButton: FloatingActionButton.small(
         heroTag: 'map_my_location',
-        tooltip: 'My location',
+        tooltip: 'Refresh my location',
         backgroundColor: context.aridSurface,
         foregroundColor: Theme.of(context).colorScheme.primary,
         onPressed: _centering ? null : () => _centerOnUser(announce: true),
@@ -255,7 +247,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 height: 18,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-            : const Icon(Icons.my_location),
+            : const Icon(Icons.gps_fixed),
       ),
       body: Column(
         children: [
@@ -299,7 +291,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   ),
                   const SizedBox(width: 8),
                   FilterChip(
-                    label: Text('Low $lowCount'),
+                    label: Text('Non-breeding $lowCount'),
                     selected: _riskFilter == RiskLevel.green,
                     onSelected: (_) => _selectRisk(RiskLevel.green),
                   ),
@@ -350,7 +342,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                             filtered.first.longitude,
                           )
                         : _fallbackCenter),
-                initialZoom: _userLocation != null ? _userZoom : 13,
+                initialZoom: _userLocation != null ? _userZoom : 15,
                 onMapReady: _onMapReady,
               ),
               children: [

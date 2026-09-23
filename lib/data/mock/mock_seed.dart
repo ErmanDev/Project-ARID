@@ -45,6 +45,18 @@ class MockDataSeeder {
     await _config.set(ConfigKeys.mockSeedVersion, version);
   }
 
+  Future<void> purgeIfDisabled() async {
+    if (kUseMockData) return;
+    await _isar.writeTxn(() async {
+      final current = await _isar.reports.where().findAll();
+      for (final report in current) {
+        if (report.id.startsWith('mock-')) {
+          await _isar.reports.delete(report.isarId);
+        }
+      }
+    });
+  }
+
   Report _toReport(Map<String, dynamic> row) {
     final hoursAgo = (row['hoursAgo'] as num?)?.toInt() ?? 0;
     final classification = row['classification'] == 'nonBreeding'
@@ -53,7 +65,7 @@ class MockDataSeeder {
     final riskRaw = row['riskLevel'] as String? ?? 'yellow';
     final risk = switch (riskRaw) {
       'red' => RiskLevel.red,
-      'green' => RiskLevel.green,
+      'green' || 'blue' => RiskLevel.green,
       _ => RiskLevel.yellow,
     };
     final imageUrl = row['imageUrl'] as String?;

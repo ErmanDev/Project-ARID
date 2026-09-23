@@ -8,19 +8,12 @@ import {
 } from 'react'
 import {
   onAuthStateChanged,
-  signInWithEmailAndPassword,
   signInWithPopup,
   signOut as firebaseSignOut,
   type User,
 } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
-import {
-  allowAnyAuth,
-  firebaseConfigured,
-  getDb,
-  getFirebaseAuth,
-  googleProvider,
-} from './firebase'
+import { firebaseConfigured, getDb, getFirebaseAuth, googleProvider } from './firebase'
 import { mockIsStaff, useMockData } from './config'
 
 type AuthValue = {
@@ -29,7 +22,6 @@ type AuthValue = {
   loading: boolean
   configured: boolean
   error: string | null
-  signInEmail: (email: string, password: string) => Promise<void>
   signInGoogle: () => Promise<void>
   signOut: () => Promise<void>
   /**
@@ -43,7 +35,6 @@ type AuthValue = {
 const AuthContext = createContext<AuthValue | null>(null)
 
 async function resolveStaff(uid: string): Promise<boolean> {
-  if (allowAnyAuth) return true
   const snap = await getDoc(doc(getDb(), 'staff', uid))
   return snap.exists()
 }
@@ -95,10 +86,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       configured: firebaseConfigured,
       error,
-      signInEmail: async (email, password) => {
-        setError(null)
-        await signInWithEmailAndPassword(getFirebaseAuth(), email, password)
-      },
       signInGoogle: async () => {
         setError(null)
         await signInWithPopup(getFirebaseAuth(), googleProvider)

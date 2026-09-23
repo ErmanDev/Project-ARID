@@ -50,12 +50,12 @@ function FitBounds({ area, reports }: { area: Area; reports: Report[] }) {
   return null
 }
 
-const LEGEND: RiskLevel[] = ['red', 'yellow', 'blue']
+const LEGEND: RiskLevel[] = ['red', 'yellow', 'green']
 
 const LEGEND_SWATCH: Record<RiskLevel, string> = {
   red: 'bg-risk-red-solid',
   yellow: 'bg-risk-yellow-solid',
-  blue: 'bg-risk-blue-solid',
+  green: 'bg-risk-green-solid',
 }
 
 type Props = {

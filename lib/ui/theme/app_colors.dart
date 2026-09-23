@@ -18,9 +18,9 @@ class AppColors {
   static const Color riskYellowTint = Color(0xFFFAF2E5);
   static const Color riskYellowEdge = Color(0xFFE3C58F);
   static const Color riskYellowInk = Color(0xFF765A2D);
-  static const Color riskGreenTint = Color(0xFFEDF5ED);
-  static const Color riskGreenEdge = Color(0xFFB7CFB7);
-  static const Color riskGreenInk = Color(0xFF466B4B);
+  static const Color riskGreenTint = Color(0xFFEDF3ED);
+  static const Color riskGreenEdge = Color(0xFFA8BFA8);
+  static const Color riskGreenInk = Color(0xFF3A5A3A);
 
   // Dashboard surface register: sunken < background < panel < surface.
   static const Color background = Color(0xFFF3F6F7);

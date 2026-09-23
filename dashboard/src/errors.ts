@@ -75,3 +75,22 @@ export function writeErrorMessage(error: unknown): string {
   if (code && WRITE_MESSAGES[code]) return WRITE_MESSAGES[code]
   return 'Could not save the review status. The change was not applied — try again.'
 }
+
+const READ_MESSAGES: Record<string, string> = {
+  'permission-denied':
+    'Your account is not on the staff list yet. Ask an administrator to add a staff record for your UID, then use Check again on the access page.',
+  unavailable:
+    'Could not reach Firestore. Check your internet connection and try again.',
+  unauthenticated: 'Your session expired. Sign in again to load live reports.',
+}
+
+/** Firestore listener failures, phrased for the monitoring dashboard. */
+export function readErrorMessage(error: unknown): string {
+  const code = codeOf(error)
+  if (code && READ_MESSAGES[code]) return READ_MESSAGES[code]
+  const message = error instanceof Error ? error.message : String(error ?? '')
+  if (/missing or insufficient permissions/i.test(message)) {
+    return READ_MESSAGES['permission-denied']
+  }
+  return 'Could not load live reports. Try signing out and back in, or contact an administrator.'
+}
