@@ -9,8 +9,8 @@ import { Leaderboard } from '../components/Leaderboard'
 import { LiveMap } from '../components/LiveMap'
 import { ReportDetail } from '../components/ReportDetail'
 import { StatsPanel, StatsPanelSkeleton } from '../components/StatsPanel'
-import { Alert, Button, buttonClasses, EmptyState, SectionHeading, Skeleton } from '../components/ui'
-import { ThemeToggle } from '../components/ThemeToggle'
+import { Alert, buttonClasses, EmptyState, SectionHeading, Skeleton } from '../components/ui'
+import { AppHeader } from '../components/AppHeader'
 import { formatAgo } from '../format'
 import { useOnline, useReports, useUsers } from '../hooks'
 import { useMockData } from '../config'
@@ -121,7 +121,9 @@ export function MonitorPage() {
     [users],
   )
   const hotspotCount = buildHotspots(visible).length
-  const outOfScopeCount = reports.length - inScope.length
+  const outOfScopeCount = reports.filter(
+    (report) => !inArea(report.latitude, report.longitude, area),
+  ).length
 
   // Resolved against every report, not just the visible ones, so a filter
   // change explains itself instead of silently emptying the panel.
@@ -145,43 +147,22 @@ export function MonitorPage() {
   if (!auth.isStaff) return <Navigate to="/denied" replace />
 
   return (
-    <div className="flex h-full flex-col bg-bg">
-      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border bg-surface px-4 py-2.5">
-        <div className="flex items-center gap-2.5">
-          <img src="/arid-logo.png" alt="" className="size-8 shrink-0" />
-          <div>
-            <h1 className="text-md font-semibold tracking-tight text-ink">
-              A.R.I.D.
-            </h1>
-            <p className="text-xs text-muted">Breeding-site monitoring</p>
-          </div>
+    <div className="monitor-workspace flex min-h-full flex-col bg-bg lg:h-full">
+      <AppHeader status={<LiveStatus online={online} updatedAt={updatedAt} />} />
+      <div className="monitor-heading page-heading">
+        <div>
+          <p className="eyebrow">Community overview</p>
+          <h1>Small observations. Meaningful action.</h1>
+          <p>Explore reports, spot patterns, and know where to look next.</p>
         </div>
-        <div className="flex items-center gap-4">
-          <LiveStatus online={online} updatedAt={updatedAt} />
-          <Link to="/analyze" className={buttonClasses('secondary', 'sm')}>
-            <IconScan size={16} />
-            Analyze image
-          </Link>
-          <ThemeToggle />
-          {useMockData ? (
-            <span className="rounded-full border border-border bg-sunken px-2 py-0.5 text-xs font-medium text-ink-2">
-              Mock staff
-            </span>
-          ) : (
-            <Button size="sm" variant="ghost" onClick={() => void auth.signOut()}>
-              Sign out
-            </Button>
-          )}
-        </div>
-      </header>
+        <Link to="/analyze" className={buttonClasses('primary')}><IconScan size={17} />Analyze a photo</Link>
+      </div>
 
       {useMockData || !online || error || outOfScopeCount > 0 ? (
         <div className="space-y-2 border-b border-border bg-panel px-4 py-2.5">
           {useMockData ? (
             <Alert tone="info" icon={<IconInfo size={16} />}>
-              Showing mock reports for UI work. Set{' '}
-              <code>VITE_USE_MOCK_DATA=false</code> in <code>dashboard/.env</code>{' '}
-              when Firestore sync is ready.
+              You’re exploring a demo workspace. These sample reports are not live field data.
             </Alert>
           ) : null}
           {!online ? (
@@ -200,9 +181,7 @@ export function MonitorPage() {
             <Alert tone="info" icon={<IconInfo size={16} />}>
               {outOfScopeCount} synced report{outOfScopeCount === 1 ? '' : 's'}{' '}
               {outOfScopeCount === 1 ? 'is' : 'are'} outside{' '}
-              <span className="font-medium">{area.name}</span>. Switch Scope to{' '}
-              <span className="font-medium">All locations</span> to see them on
-              the map.
+              the supported map area and are not shown on the map.
             </Alert>
           ) : null}
         </div>
@@ -217,8 +196,13 @@ export function MonitorPage() {
         />
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="min-h-[55vh] lg:min-h-0">
+      <main id="main-content" tabIndex={-1} className="monitor-content grid min-h-0 flex-1 grid-cols-1 gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_350px]">
+        <section className="flex min-h-[55vh] flex-col overflow-hidden rounded-panel border border-border bg-surface shadow-sm lg:min-h-0" aria-label="Report map">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
+            <h2 className="font-semibold">Reports near you <span className="ml-2 text-xs font-normal text-muted">{area.name}</span></h2>
+            <span className="text-xs text-muted" aria-live="polite">{loading ? 'Loading reports…' : `${visible.length} visible reports`}</span>
+          </div>
+          <div className="min-h-[45vh] flex-1 lg:min-h-0">
           <LiveMap
             area={area}
             reports={visible}
@@ -229,11 +213,12 @@ export function MonitorPage() {
             showHotspots={filters.showHotspots}
             filtered={!isDefaultFilters(filters) || inScope.length !== reports.length}
           />
-        </div>
+          </div>
+        </section>
 
         <aside
           aria-label="Area detail"
-          className="min-h-0 space-y-5 overflow-y-auto border-t border-border bg-panel p-4 lg:border-l lg:border-t-0"
+          className="min-h-0 space-y-5 overflow-y-auto rounded-panel border border-border bg-panel p-4"
         >
           {/* A selected report outranks the summary: it is what the operator
               just asked for, and it should not require a scroll. */}
@@ -290,7 +275,7 @@ export function MonitorPage() {
             )}
           </section>
         </aside>
-      </div>
+      </main>
     </div>
   )
 }

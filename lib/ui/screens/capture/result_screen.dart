@@ -1,11 +1,10 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 
 import '../../../data/models/enums.dart';
 import '../../../providers.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/common.dart';
+import '../../widgets/large_title_page.dart';
 
 class ResultScreen extends StatelessWidget {
   const ResultScreen({super.key, required this.outcome});
@@ -14,103 +13,101 @@ class ResultScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.arid;
     final report = outcome.report;
-    return Scaffold(
-      appBar: AppBar(title: const Text('Report saved')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+    return LargeTitlePage(
+      title: 'Report saved',
+      automaticallyImplyLeading: false,
+      subtitle: report.syncStatus == SyncStatus.synced
+          ? 'It’s on the map.'
+          : 'It will sync to the map when you’re online.',
+      bottomBar: FloatingActionBar(
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.file(
-              File(report.imagePath),
-              height: 220,
-              width: double.infinity,
-              fit: BoxFit.cover,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              RiskBadge(level: report.riskLevel),
-              const SizedBox(width: 8),
-              SyncStatusChip(status: report.syncStatus),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SectionCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  report.classification == Classification.breeding
-                      ? 'Breeding site detected'
-                      : 'Non-breeding',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Confidence ${(report.confidenceScore * 100).toStringAsFixed(1)}%',
-                  style: TextStyle(color: context.aridMuted),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Risk: ${switch (report.riskLevel) {
-                    RiskLevel.red => 'High',
-                    RiskLevel.yellow => 'Moderate',
-                    RiskLevel.green => 'Non-breeding',
-                  }}',
-                  style: TextStyle(color: context.aridMuted),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '${report.latitude.toStringAsFixed(5)}, ${report.longitude.toStringAsFixed(5)}'
-                  '${report.gpsManual ? '  ·  manual pin' : '  ·  ±${report.gpsAccuracy.toStringAsFixed(0)} m'}',
-                  style: TextStyle(color: context.aridMuted),
-                ),
-                if (!outcome.usedOnDeviceModel) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    'Development classifier is active. Place your Teachable Machine export at assets/models/arid_model.tflite for production inference.',
-                    style: TextStyle(color: context.aridMuted, fontSize: 12),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          SectionCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '+${report.pointsAwarded} points (provisional)',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                ...outcome.breakdown.map(
-                  (line) => Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(
-                      line,
-                      style: TextStyle(color: context.aridMuted),
-                    ),
-                  ),
-                ),
-                Text(
-                  'Verified after a successful cloud sync. The total is already on this device.',
-                  style: TextStyle(color: context.aridMuted, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
           FilledButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Done'),
           ),
         ],
       ),
+      slivers: [
+        SliverList.list(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              child: SectionCard(
+                child: Row(
+                  children: [
+                    ReportThumbnail(report: report, size: 72, radius: 16),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            reportTitle(report),
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 6,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              RiskBadge(level: report.riskLevel, compact: true),
+                              SyncStatusChip(status: report.syncStatus),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            GroupedSection(
+              children: [
+                GroupedRow(
+                  title: 'Confidence',
+                  value:
+                      '${(report.confidenceScore * 100).toStringAsFixed(0)}%',
+                ),
+                GroupedRow(
+                  title: 'Location',
+                  subtitle: report.gpsManual
+                      ? 'Placed by hand'
+                      : 'GPS ±${report.gpsAccuracy.toStringAsFixed(0)} m',
+                  value:
+                      '${report.latitude.toStringAsFixed(5)}, '
+                      '${report.longitude.toStringAsFixed(5)}',
+                ),
+              ],
+            ),
+            GroupedSection(
+              header: '+${report.pointsAwarded} points',
+              footer: 'Points are verified once the report syncs.',
+              dividerIndent: 60,
+              children: [
+                for (final line in outcome.breakdown)
+                  GroupedRow(
+                    leading: const IconTile(
+                      icon: Icons.star_rounded,
+                      color: AppColors.amber,
+                    ),
+                    title: line,
+                  ),
+              ],
+            ),
+            if (!outcome.usedOnDeviceModel)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                  'This result came from a test model and may be inaccurate.',
+                  style: TextStyle(color: p.secondaryInk, fontSize: 13),
+                ),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }

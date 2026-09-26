@@ -46,15 +46,15 @@ export const TILE_URL: Record<ResolvedTheme, string> = {
 
 /** Study-area boundary, and the pin keyline, per theme. */
 export const MAP_ACCENT: Record<ResolvedTheme, string> = {
-  light: '#4a7a8c',
-  dark: '#92c7dc',
+  light: '#007f9f',
+  dark: '#63d3e6',
 }
 
 const PIN_OUTLINE: Record<ResolvedTheme, string> = {
   light: '#ffffff',
   // Pure white ringing a bright pin glares on dark tiles; the panel colour
   // reads as a cut-out instead.
-  dark: '#1a1f22',
+  dark: '#181d24',
 }
 
 /**
@@ -94,8 +94,8 @@ export function riskIcon(
  * dark tiles it must brighten instead, or dense clusters read as holes.
  */
 export const HEAT_GRADIENT: Record<ResolvedTheme, Record<number, string>> = {
-  light: { 0.2: '#7fb1c4', 0.4: '#c9a66b', 0.65: '#c07a55', 1.0: '#8f2f3a' },
-  dark: { 0.2: '#2f6f8a', 0.4: '#7fae8a', 0.65: '#d7a955', 1.0: '#f2707a' },
+  light: { 0.2: '#4aa8c8', 0.4: '#c9a66b', 0.65: '#c07a55', 1.0: '#8f2f3a' },
+  dark: { 0.2: '#1f8fb4', 0.4: '#7fae8a', 0.65: '#d7a955', 1.0: '#f2707a' },
 }
 
 export function formatWhen(iso: string): string {

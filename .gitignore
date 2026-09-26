@@ -46,3 +46,7 @@ lib/config/local_secrets.dart
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Design-skill reference copies and design tool caches (local only)
+/.design-rules/
+/.impeccable/

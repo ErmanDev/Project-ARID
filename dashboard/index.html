@@ -7,25 +7,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="theme-color"
-      content="#f3f6f8"
+      content="#142138"
       media="(prefers-color-scheme: light)"
     />
     <meta
       name="theme-color"
-      content="#101316"
+      content="#0d1117"
       media="(prefers-color-scheme: dark)"
     />
     <meta
       name="description"
       content="A.R.I.D. staff dashboard for monitoring synced dengue vector breeding-site reports."
     />
-    <!-- One family in several weights. `display=swap` plus a matching system
-         fallback stack means no invisible-text flash on a slow LGU connection. -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Montserrat is self-hosted from /fonts and declared in index.css, so
+         there is no third-party font request to block first paint. Preloaded
+         because the @font-face sits inside the stylesheet: without this the
+         browser cannot discover the file until the CSS has parsed. -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap"
-      rel="stylesheet"
+      rel="preload"
+      href="/fonts/Montserrat-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
     />
     <title>A.R.I.D. Monitoring</title>
     <script>

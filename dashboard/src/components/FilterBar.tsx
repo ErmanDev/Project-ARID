@@ -1,4 +1,3 @@
-import { AREAS } from '../areas'
 import { IconHeat, IconHotspot, IconPin } from './icons'
 import { LayerToggle, Segmented, Select, type SegmentOption } from './ui'
 import type { Filters, RiskLevel } from '../types'
@@ -36,7 +35,7 @@ function Group({
 }
 
 /**
- * Three jobs, visually separated: choose the scope (where/when/what), narrow by
+ * Three jobs, visually separated: choose dates and classification, narrow by
  * risk, choose what the map draws. Previously all nine controls sat in one
  * undifferentiated wrap of mixed pills and selects, so nothing read as primary.
  */
@@ -58,18 +57,7 @@ export function FilterBar({ filters, onChange, hotspotCount, counts }: Props) {
 
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5">
-      <Group label="Scope">
-        <Select
-          label="Study area"
-          value={filters.areaId}
-          onChange={(event) => onChange({ ...filters, areaId: event.target.value })}
-        >
-          {AREAS.map((area) => (
-            <option key={area.id} value={area.id}>
-              {area.name}
-            </option>
-          ))}
-        </Select>
+      <Group label="Filters">
         <Select
           label="Date range"
           value={filters.range}

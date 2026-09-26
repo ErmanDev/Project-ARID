@@ -55,7 +55,7 @@ export function DeniedPage() {
   }
 
   return (
-    <div className="flex min-h-full items-center justify-center bg-bg px-4 py-10">
+    <div className="auth-workspace flex min-h-full items-center justify-center bg-bg px-4 py-10">
       <main className="w-full max-w-[27rem]">
         <div className="mb-3 flex justify-end">
           <ThemeToggle />
@@ -164,7 +164,7 @@ export function DeniedPage() {
           </div>
         </div>
 
-        <p className="mx-auto mt-4 max-w-[40ch] text-center text-xs text-muted">
+        <p className="mx-auto mt-4 max-w-[40ch] auth-note text-center text-xs">
           Once your administrator adds the record, use Check again — no need to
           sign out.
         </p>

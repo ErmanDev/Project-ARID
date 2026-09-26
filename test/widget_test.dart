@@ -20,20 +20,14 @@ void main() {
 
     test('breeding with high confidence is red', () {
       expect(
-        mapper.map(
-          classification: Classification.breeding,
-          confidence: 0.85,
-        ),
+        mapper.map(classification: Classification.breeding, confidence: 0.85),
         RiskLevel.red,
       );
     });
 
     test('breeding with lower confidence is yellow', () {
       expect(
-        mapper.map(
-          classification: Classification.breeding,
-          confidence: 0.55,
-        ),
+        mapper.map(classification: Classification.breeding, confidence: 0.55),
         RiskLevel.yellow,
       );
     });
