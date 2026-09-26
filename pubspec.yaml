@@ -1,7 +1,7 @@
 name: arid
 description: "Autonomous Risk Identification and Distribution Mapping of Dengue Vector Breeding Sites"
 publish_to: "none"
-version: 1.0.4+5
+version: 1.0.5+6
 
 environment:
   sdk: ^3.12.2
@@ -32,6 +32,7 @@ dependencies:
   http: ^1.6.0
   collection: ^1.19.1
   onnxruntime: ^1.4.1
+  google_sign_in: ^7.2.0
 
 dev_dependencies:
   flutter_test:

@@ -30,15 +30,11 @@ class FirebaseBackend {
     }
   }
 
-  Future<String> ensureAnonymousUser(UserProfile profile) async {
-    if (profile.firebaseUid != null &&
-        FirebaseAuth.instance.currentUser?.uid == profile.firebaseUid) {
-      return profile.firebaseUid!;
-    }
-    final existing = FirebaseAuth.instance.currentUser;
-    if (existing != null) return existing.uid;
-    final cred = await FirebaseAuth.instance.signInAnonymously();
-    return cred.user!.uid;
+  /// The signed-in Google account's uid, or null when nobody is signed in.
+  String? signedInUid() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || user.isAnonymous) return null;
+    return user.uid;
   }
 
   Future<void> upsertReport({

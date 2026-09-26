@@ -23,6 +23,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _uploadPreset = TextEditingController();
   bool _nameReady = false;
   bool _syncing = false;
+  bool _signingOut = false;
 
   @override
   void initState() {
@@ -108,6 +109,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final reports = ref.watch(reportsProvider).valueOrNull ?? const <Report>[];
     final online = ref.watch(isOnlineProvider);
     final themeMode = ref.watch(themeModeProvider);
+    final account = ref.watch(authUserProvider).valueOrNull;
     if (profile != null && !_nameReady) {
       _name.text = profile.displayName;
       _nameReady = true;
@@ -330,6 +332,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ],
             ),
             GroupedSection(
+              header: 'Account',
+              footer: 'Signed in with Google, the same account as the web '
+                  'dashboard.',
+              children: [
+                GroupedRow(
+                  title: account?.email ?? 'Google account',
+                  subtitle: account?.displayName,
+                ),
+                GroupedRow(
+                  title: 'Sign out',
+                  destructive: true,
+                  onTap: _signingOut ? null : _signOut,
+                ),
+              ],
+            ),
+            GroupedSection(
               header: 'About',
               children: [
                 GroupedRow(title: 'Device ID', subtitle: profile?.id ?? '—'),
@@ -339,6 +357,45 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
       ],
     );
+  }
+
+  Future<void> _signOut() async {
+    final auth = ref.read(authServiceProvider);
+    final unsynced = await auth.unsyncedReportCount();
+    if (!mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sign out?'),
+        content: Text(
+          unsynced == 0
+              ? 'You can sign back in with Google at any time.'
+              : '$unsynced ${unsynced == 1 ? 'report hasn’t' : 'reports haven’t'} '
+                    'synced yet. They stay on this phone and sync when you '
+                    'sign back in with the same account. Signing in with a '
+                    'different account removes them.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Sign out'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _signingOut = true);
+    try {
+      await auth.signOut();
+    } catch (_) {
+      if (mounted) _toast('Couldn’t sign out. Try again.');
+    } finally {
+      if (mounted) setState(() => _signingOut = false);
+    }
   }
 
   static String _modeLabel(ThemeMode mode) => switch (mode) {

@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar_community/isar.dart';
 import 'package:uuid/uuid.dart';
 
@@ -11,6 +12,7 @@ import 'data/models/report.dart';
 import 'data/models/user_profile.dart';
 import 'data/repositories/config_repository.dart';
 import 'data/repositories/repositories.dart';
+import 'services/auth/auth_service.dart';
 import 'services/camera/image_service.dart';
 import 'services/classification/classification_result.dart';
 import 'services/classification/classifier_service.dart';
@@ -96,6 +98,26 @@ final evaluationExportProvider = Provider<EvaluationExportService>(
 
 final firebaseBackendProvider = Provider<FirebaseBackend>((ref) {
   return FirebaseBackend();
+});
+
+final authServiceProvider = Provider<AuthService>((ref) {
+  return AuthService(
+    isar: ref.watch(isarProvider),
+    backend: ref.watch(firebaseBackendProvider),
+  );
+});
+
+/// The signed-in Google user, or null. Anonymous sessions from earlier
+/// versions count as signed out so the user is asked to sign in.
+final authUserProvider = StreamProvider<User?>((ref) async* {
+  final ready = await ref.watch(firebaseBackendProvider).tryInit();
+  if (!ready) {
+    yield null;
+    return;
+  }
+  yield* FirebaseAuth.instance.authStateChanges().map(
+    (user) => user == null || user.isAnonymous ? null : user,
+  );
 });
 
 final syncServiceProvider = Provider<SyncService>((ref) {
