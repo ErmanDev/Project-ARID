@@ -19,6 +19,8 @@ class AridApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
+      highContrastTheme: AppTheme.highContrastLight,
+      highContrastDarkTheme: AppTheme.highContrastDark,
       themeMode: themeMode,
       home: onboarding.when(
         data: (done) =>

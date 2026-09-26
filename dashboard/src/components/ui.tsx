@@ -28,7 +28,7 @@ import {
 
 /* ------------------------------------------------------------------ Button */
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost'
+type ButtonVariant = 'primary' | 'secondary' | 'soft' | 'ghost'
 type ButtonSize = 'sm' | 'md'
 
 const BUTTON_BASE =
@@ -42,6 +42,11 @@ const BUTTON_VARIANT: Record<ButtonVariant, string> = {
   secondary:
     'border border-border-strong/70 bg-surface text-ink shadow-xs ' +
     'hover:border-border-strong hover:bg-sunken active:bg-sunken/80',
+  // A tinted secondary action: it has a surface of its own, but stays quieter
+  // than primary so it never competes with the main call to action.
+  soft:
+    'border border-primary-100 bg-primary-50 text-primary-ink shadow-xs ' +
+    'hover:border-primary-200 hover:bg-primary-100 active:bg-primary-200/70',
   ghost: 'text-primary-ink hover:bg-primary-50 active:bg-primary-100',
 }
 
@@ -244,7 +249,7 @@ export function Segmented<T extends string>({
     <div
       role="radiogroup"
       aria-label={label}
-      className={`inline-flex items-center gap-0.5 rounded-control border border-border bg-sunken p-0.5 shadow-xs ${className}`}
+      className={`inline-flex max-w-full items-center gap-0.5 overflow-x-auto rounded-control border border-border bg-sunken p-0.5 shadow-xs ${className}`}
     >
       {options.map((option) => {
         const selected = option.value === value
@@ -257,7 +262,7 @@ export function Segmented<T extends string>({
             title={option.title}
             aria-label={option.title}
             onClick={() => onChange(option.value)}
-            className={`tap focus-inset inline-flex items-center gap-1.5 rounded-[calc(var(--radius-control)-2px)] px-2.5 py-1 text-sm font-medium transition-[background-color,color,box-shadow] duration-(--duration-fast) ease-(--ease-out-quart) ${
+            className={`tap focus-inset inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[calc(var(--radius-control)-2px)] px-2.5 py-1 text-sm font-medium transition-[background-color,color,box-shadow] duration-(--duration-fast) ease-(--ease-out-quart) ${
               selected
                 ? 'bg-surface text-ink shadow-xs'
                 : 'text-muted hover:text-ink-2 active:bg-surface/60'

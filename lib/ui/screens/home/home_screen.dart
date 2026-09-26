@@ -6,13 +6,22 @@ import '../../../data/models/enums.dart';
 import '../../../data/models/report.dart';
 import '../../../providers.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/arid_logo.dart';
 import '../../widgets/common.dart';
-import '../../widgets/theme_mode_button.dart';
+import '../../widgets/large_title_page.dart';
+import '../../widgets/report_detail_sheet.dart';
 import '../rewards/rewards_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({
+    super.key,
+    this.onCapture,
+    this.onOpenMap,
+    this.onOpenHistory,
+  });
+
+  final VoidCallback? onCapture;
+  final VoidCallback? onOpenMap;
+  final VoidCallback? onOpenHistory;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -22,310 +31,248 @@ class HomeScreen extends ConsumerWidget {
     final pending = reports
         .where((r) => r.syncStatus != SyncStatus.synced)
         .length;
-    final high = reports.where((r) => r.riskLevel == RiskLevel.red).length;
-    final moderate = reports
-        .where((r) => r.riskLevel == RiskLevel.yellow)
-        .length;
-    final low = reports.where((r) => r.riskLevel == RiskLevel.green).length;
+    final name = profile?.displayName.trim() ?? '';
+    final streak = profile?.currentStreak ?? 0;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const AridBrandTitle(),
-        actions: const [ThemeModeButton()],
-      ),
-      body: Column(
-        children: [
-          OfflineBanner(online: online),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
+    return LargeTitlePage(
+      title: 'Home',
+      subtitle: name.isEmpty ? null : 'Welcome back, $name',
+      slivers: [
+        SliverList.list(
+          children: [
+            if (!online)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: OfflineBanner(online: online),
+              ),
+            if (onCapture != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
+                child: _ReportPrompt(onCapture: onCapture!),
+              ),
+            _RiskSummary(reports: reports, onOpenMap: onOpenMap),
+            GroupedSection(
+              header: 'Your activity',
+              dividerIndent: 60,
               children: [
-                Text(
-                  'FIELD OVERVIEW',
-                  style: TextStyle(
-                    color: context.aridMuted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.8,
+                GroupedRow(
+                  leading: const IconTile(
+                    icon: Icons.star_rounded,
+                    color: AppColors.amber,
                   ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  'Local activity',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Reports, classification, GPS tags, and points remain available without a connection.',
-                  style: TextStyle(color: context.aridMuted),
-                ),
-                const SizedBox(height: 16),
-                _RiskSnapshot(
-                  total: reports.length,
-                  high: high,
-                  moderate: moderate,
-                  low: low,
-                ),
-                const SizedBox(height: 12),
-                SectionCard(
+                  title: 'Points',
+                  value: '${profile?.totalPoints ?? 0}',
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const RewardsScreen()),
                   ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: AppColors.secondary.withValues(alpha: 0.16),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.stars_outlined,
-                          color: AppColors.secondary,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${profile?.totalPoints ?? 0} points',
-                              style: Theme.of(context).textTheme.titleLarge,
-                            ),
-                            Text(
-                              '${profile?.reportCount ?? 0} reports  ·  ${profile?.verifiedPoints ?? 0} verified',
-                              style: TextStyle(color: context.aridMuted),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(Icons.chevron_right, color: context.aridMuted),
-                    ],
+                ),
+                GroupedRow(
+                  leading: const IconTile(
+                    icon: Icons.bolt_rounded,
+                    color: AppColors.indigo,
                   ),
+                  title: 'Reporting streak',
+                  value: streak == 1 ? '1 day' : '$streak days',
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _StatTile(
-                        label: 'Pending sync',
-                        value: '$pending',
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _StatTile(
-                        label: 'Streak',
-                        value: '${profile?.currentStreak ?? 0}d',
-                      ),
-                    ),
-                  ],
+                GroupedRow(
+                  leading: const IconTile(
+                    icon: Icons.cloud_upload_rounded,
+                    color: AppColors.slate,
+                  ),
+                  title: 'Waiting to sync',
+                  value: '$pending',
+                  onTap: onOpenHistory,
                 ),
-                const SizedBox(height: 20),
-                const _SectionLabel('Recent reports'),
-                const SizedBox(height: 8),
-                if (reports.isEmpty)
-                  SectionCard(
-                    child: Text(
-                      'No reports yet. Open Capture to photograph a possible breeding site. Classification, GPS, and points all save on this device.',
-                      style: TextStyle(color: context.aridMuted),
-                    ),
-                  )
-                else
-                  ...reports.take(8).map(_HomeReportTile.new),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      label,
-      style: TextStyle(
-        color: context.aridInk,
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-      ),
-    );
-  }
-}
-
-class _RiskSnapshot extends StatelessWidget {
-  const _RiskSnapshot({
-    required this.total,
-    required this.high,
-    required this.moderate,
-    required this.low,
-  });
-
-  final int total;
-  final int high;
-  final int moderate;
-  final int low;
-
-  @override
-  Widget build(BuildContext context) {
-    return SectionCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('$total', style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: 2),
-          Text(
-            'reports on this device',
-            style: TextStyle(color: context.aridMuted, fontSize: 13),
-          ),
-          const SizedBox(height: 14),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: SizedBox(
-              height: 6,
-              child: total == 0
-                  ? ColoredBox(color: context.aridSunken)
-                  : Row(
-                      children: [
-                        if (high > 0)
-                          Expanded(
-                            flex: high,
-                            child: const ColoredBox(color: AppColors.riskRed),
-                          ),
-                        if (moderate > 0)
-                          Expanded(
-                            flex: moderate,
-                            child: const ColoredBox(
-                              color: AppColors.riskYellow,
-                            ),
-                          ),
-                        if (low > 0)
-                          Expanded(
-                            flex: low,
-                            child: const ColoredBox(color: AppColors.riskGreen),
-                          ),
-                      ],
+            GroupedSection(
+              header: 'Recent reports',
+              headerTrailing: reports.isEmpty || onOpenHistory == null
+                  ? null
+                  : TextButton(
+                      onPressed: onOpenHistory,
+                      child: const Text('See all'),
                     ),
+              dividerIndent: 86,
+              children: reports.isEmpty
+                  ? [
+                      const EmptyState(
+                        icon: Icons.photo_camera_outlined,
+                        title: 'No reports yet',
+                        message:
+                            'Photograph a possible breeding site to add your '
+                            'first report. It saves on this device.',
+                      ),
+                    ]
+                  : [
+                      for (final report in reports.take(5))
+                        ReportRow(
+                          report: report,
+                          meta: DateFormat(
+                            'MMM d · h:mm a',
+                          ).format(report.capturedAt),
+                          onTap: () => showReportDetail(context, report),
+                        ),
+                    ],
             ),
-          ),
-          const SizedBox(height: 12),
-          _RiskRow(label: 'High risk', value: high, color: AppColors.riskRed),
-          const SizedBox(height: 8),
-          _RiskRow(
-            label: 'Moderate',
-            value: moderate,
-            color: AppColors.riskYellow,
-          ),
-          const SizedBox(height: 8),
-          _RiskRow(label: 'Non-breeding', value: low, color: AppColors.riskGreen),
-        ],
-      ),
-    );
-  }
-}
-
-class _RiskRow extends StatelessWidget {
-  const _RiskRow({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  final String label;
-  final int value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            label,
-            style: TextStyle(color: context.aridMuted, fontSize: 13),
-          ),
-        ),
-        Text(
-          '$value',
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+          ],
         ),
       ],
     );
   }
 }
 
-class _StatTile extends StatelessWidget {
-  const _StatTile({required this.label, required this.value});
+/// The one prominent action on Home.
+class _ReportPrompt extends StatelessWidget {
+  const _ReportPrompt({required this.onCapture});
 
-  final String label;
-  final String value;
+  final VoidCallback onCapture;
 
   @override
   Widget build(BuildContext context) {
+    final p = context.arid;
     return SectionCard(
+      padding: const EdgeInsets.all(20),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(value, style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: 4),
-          Text(label, style: TextStyle(color: context.aridMuted)),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: p.accentTint,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.water_drop_rounded,
+                  color: p.accentInk,
+                  size: 26,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Seen standing water?',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Take a photo and A.R.I.D. checks it for mosquito '
+                      'breeding. It works without internet.',
+                      style: TextStyle(color: p.secondaryInk, fontSize: 15),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          FilledButton.icon(
+            onPressed: onCapture,
+            icon: const Icon(Icons.camera_alt_rounded),
+            label: const Text('Report a breeding site'),
+          ),
         ],
       ),
     );
   }
 }
 
-class _HomeReportTile extends StatelessWidget {
-  const _HomeReportTile(this.report);
+/// The product's signature: every reported site, broken down by risk, in
+/// the same shape-and-color language the map uses.
+class _RiskSummary extends StatelessWidget {
+  const _RiskSummary({required this.reports, this.onOpenMap});
 
-  final Report report;
+  final List<Report> reports;
+  final VoidCallback? onOpenMap;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: SectionCard(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          children: [
-            RiskBadge(level: report.riskLevel, compact: true),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    report.classification == Classification.breeding
-                        ? 'Breeding site'
-                        : 'Non-breeding',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  Text(
-                    DateFormat('MMM d, h:mm a').format(report.capturedAt),
-                    style: TextStyle(color: context.aridMuted, fontSize: 12),
-                  ),
-                ],
+    final p = context.arid;
+    int count(RiskLevel level) =>
+        reports.where((r) => r.riskLevel == level).length;
+    final levels = [RiskLevel.red, RiskLevel.yellow, RiskLevel.green];
+    final counts = {for (final level in levels) level: count(level)};
+    final total = reports.length;
+
+    return GroupedSection(
+      header: 'Reported sites',
+      headerTrailing: onOpenMap == null
+          ? null
+          : TextButton(onPressed: onOpenMap, child: const Text('Map')),
+      dividerIndent: 44,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                total == 1
+                    ? '1 site on this device'
+                    : '$total sites on this device',
+                style: TextStyle(color: p.secondaryInk, fontSize: 15),
               ),
-            ),
-            SyncStatusChip(status: report.syncStatus),
-          ],
+              const SizedBox(height: 12),
+              Semantics(
+                label:
+                    '${counts[RiskLevel.red]} high risk, '
+                    '${counts[RiskLevel.yellow]} moderate, '
+                    '${counts[RiskLevel.green]} non-breeding',
+                child: ExcludeSemantics(
+                  child: SizedBox(
+                    height: 12,
+                    child: total == 0
+                        ? DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: p.fill,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          )
+                        : Row(
+                            children: [
+                              for (final level in levels)
+                                if (counts[level]! > 0)
+                                  Expanded(
+                                    flex: counts[level]!,
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 1.5,
+                                      ),
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          color: p.risk(level).fill,
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                            ],
+                          ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
+        for (final level in levels)
+          GroupedRow(
+            leading: SizedBox(
+              width: 14,
+              child: Center(child: RiskGlyph(level: level, size: 13)),
+            ),
+            title: riskLabel(level),
+            value: '${counts[level]}',
+          ),
+      ],
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -10,6 +11,7 @@ import '../../../providers.dart';
 import '../../../services/location/location_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/common.dart';
+import '../../widgets/large_title_page.dart';
 import 'pin_drop_screen.dart';
 import 'result_screen.dart';
 
@@ -86,15 +88,17 @@ class _RemarksScreenState extends ConsumerState<RemarksScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Report not saved — a location pin is required.'),
+            content: Text(
+              'Not saved yet. Place a pin so the site can be found.',
+            ),
           ),
         );
       }
-    } catch (error) {
+    } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Could not save report: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Couldn’t save this report. Try again.')),
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -113,12 +117,12 @@ class _RemarksScreenState extends ConsumerState<RemarksScreen> {
       final open = await _showMessage(
         'Location permission needed',
         '${LocationService.rationale}\n\nOpen Settings to allow location, or drop a pin on the map.',
-        action: 'Open settings',
+        action: 'Open Settings',
       );
       if (open == true) await openAppSettings();
     } else if (outcome == LocationPermissionOutcome.denied) {
       await _showMessage(
-        'Location helps the map',
+        'Location helps others find the site',
         '${LocationService.rationale}\n\nIf GPS is unavailable, you can place the pin yourself.',
       );
     }
@@ -136,7 +140,7 @@ class _RemarksScreenState extends ConsumerState<RemarksScreen> {
             child: const Text('Continue'),
           ),
           if (action != null)
-            FilledButton(
+            TextButton(
               onPressed: () => Navigator.pop(context, true),
               child: Text(action),
             ),
@@ -147,137 +151,171 @@ class _RemarksScreenState extends ConsumerState<RemarksScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.arid;
     final draft = widget.draft;
     final isBreeding = draft.classification == Classification.breeding;
-    final title = isBreeding ? 'Breeding site detected' : 'Non-breeding';
+    final fix = _locationPreview;
+    final percent = (draft.confidenceScore * 100).clamp(0, 100);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Remarks')),
-      body: Stack(
-        children: [
-          ListView(
-            padding: const EdgeInsets.all(16),
+    return Stack(
+      children: [
+        LargeTitlePage(
+          title: 'Review',
+          subtitle: 'Check the result, then save your report.',
+          bottomBar: FloatingActionBar(
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.file(
-                  File(draft.imageFile.path),
-                  height: 220,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
-              ),
-              const SizedBox(height: 16),
-              RiskBadge(level: draft.riskLevel),
-              const SizedBox(height: 16),
-              SectionCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: Theme.of(context).textTheme.titleLarge),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Confidence ${(draft.confidenceScore * 100).toStringAsFixed(1)}%',
-                      style: TextStyle(color: context.aridMuted),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Risk: ${switch (draft.riskLevel) {
-                        RiskLevel.red => 'High',
-                        RiskLevel.yellow => 'Moderate',
-                        RiskLevel.green => 'Non-breeding',
-                      }}',
-                      style: TextStyle(color: context.aridMuted),
-                    ),
-                    if (!draft.usedOnDeviceModel) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        'Development classifier is active. Place your Teachable Machine export at assets/models/arid_model.tflite for production inference.',
-                        style: TextStyle(
-                          color: context.aridMuted,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              SectionCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Location for this report',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 8),
-                    if (_locating)
-                      Text(
-                        'Refreshing GPS…',
-                        style: TextStyle(color: context.aridMuted),
-                      )
-                    else if (_locationPreview != null)
-                      Text(
-                        '${_locationPreview!.latitude.toStringAsFixed(5)}, '
-                        '${_locationPreview!.longitude.toStringAsFixed(5)}\n'
-                        'Accuracy ±${_locationPreview!.accuracy.toStringAsFixed(0)} m',
-                        style: TextStyle(color: context.aridMuted, height: 1.45),
-                      )
-                    else
-                      Text(
-                        'GPS not ready yet. Refresh before confirming, or drop a pin if needed.',
-                        style: TextStyle(color: context.aridMuted, height: 1.45),
-                      ),
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: _busy || _locating
-                          ? null
-                          : () => unawaited(_refreshLocation()),
-                      icon: const Icon(Icons.my_location),
-                      label: const Text('Refresh my location'),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              SectionCard(
-                child: Text(
-                  'Confirm to pin this site with your refreshed location. The report saves on this device and syncs to the map when online.',
-                  style: TextStyle(color: context.aridMuted, height: 1.45),
-                ),
-              ),
-              const SizedBox(height: 24),
               FilledButton.icon(
                 onPressed: _busy ? null : () => _confirm(),
-                icon: const Icon(Icons.location_on_outlined),
-                label: const Text('Confirm & pin location'),
+                icon: const Icon(Icons.check_rounded),
+                label: const Text('Save report'),
               ),
-              const SizedBox(height: 12),
-              OutlinedButton(
+              const SizedBox(height: 4),
+              TextButton(
                 onPressed: _busy ? null : () => Navigator.pop(context),
                 child: const Text('Discard'),
               ),
             ],
           ),
-          if (_busy)
-            ColoredBox(
-              color: Theme.of(
-                context,
-              ).scaffoldBackgroundColor.withValues(alpha: 0.78),
-              child: const Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
+          slivers: [
+            SliverList.list(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: AspectRatio(
+                      aspectRatio: 4 / 3,
+                      child: Image.file(
+                        File(draft.imageFile.path),
+                        fit: BoxFit.cover,
+                        semanticLabel: 'Your photo',
+                      ),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  child: SectionCard(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        RiskBadge(level: draft.riskLevel),
+                        const SizedBox(height: 10),
+                        Text(
+                          isBreeding
+                              ? 'Possible breeding site'
+                              : 'No breeding site found',
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Confidence',
+                                style: TextStyle(
+                                  color: p.secondaryInk,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '${percent.toStringAsFixed(0)}%',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: draft.confidenceScore.clamp(0, 1),
+                            minHeight: 8,
+                            color: p.risk(draft.riskLevel).fill,
+                            semanticsLabel: 'Confidence',
+                          ),
+                        ),
+                        if (!draft.usedOnDeviceModel) ...[
+                          const SizedBox(height: 14),
+                          _TestModelNote(),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                GroupedSection(
+                  header: 'Location',
+                  footer:
+                      'The report saves on this device and appears on the '
+                      'map once it syncs.',
+                  dividerIndent: 60,
                   children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 12),
-                    Text('Getting location…'),
+                    GroupedRow(
+                      leading: IconTile(
+                        icon: Icons.location_on_rounded,
+                        color: fix == null ? p.tertiaryInk : AppColors.primary,
+                      ),
+                      title: _locating
+                          ? 'Finding your location…'
+                          : fix == null
+                          ? 'No GPS signal yet'
+                          : '${fix.latitude.toStringAsFixed(5)}, '
+                                '${fix.longitude.toStringAsFixed(5)}',
+                      subtitle: _locating
+                          ? null
+                          : fix == null
+                          ? 'You can place the pin yourself when you save.'
+                          : 'Accurate to ±${fix.accuracy.toStringAsFixed(0)} m',
+                      trailing: _locating
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.2,
+                              ),
+                            )
+                          : null,
+                    ),
+                    GroupedRow(
+                      title: 'Refresh location',
+                      accent: true,
+                      onTap: _busy || _locating
+                          ? null
+                          : () => unawaited(_refreshLocation()),
+                    ),
                   ],
                 ),
-              ),
+              ],
             ),
-        ],
-      ),
+          ],
+        ),
+        if (_busy)
+          const Positioned.fill(child: BusyOverlay(label: 'Saving report…')),
+      ],
+    );
+  }
+}
+
+class _TestModelNote extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final p = context.arid;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(Icons.science_outlined, size: 18, color: p.secondaryInk),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            kDebugMode
+                ? 'Test model active. Add the trained model at '
+                      'assets/models/arid_model.tflite for real results.'
+                : 'This result comes from a test model and may be inaccurate.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
+      ],
     );
   }
 }

@@ -33,9 +33,8 @@ class _EditReportScreenState extends ConsumerState<EditReportScreen> {
     }
     final fix = await Navigator.of(context).push<GpsFix>(
       MaterialPageRoute(
-        builder: (_) => PinDropScreen(
-          initial: LatLng(report.latitude, report.longitude),
-        ),
+        builder: (_) =>
+            PinDropScreen(initial: LatLng(report.latitude, report.longitude)),
       ),
     );
     if (fix != null) {
@@ -51,8 +50,6 @@ class _EditReportScreenState extends ConsumerState<EditReportScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
-    );
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }

@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -8,9 +6,9 @@ import '../../../data/models/enums.dart';
 import '../../../data/models/report.dart';
 import '../../../providers.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/arid_logo.dart';
 import '../../widgets/common.dart';
-import '../../widgets/theme_mode_button.dart';
+import '../../widgets/large_title_page.dart';
+import '../../widgets/report_detail_sheet.dart';
 import 'edit_report_screen.dart';
 
 class HistoryScreen extends ConsumerStatefulWidget {
@@ -22,6 +20,7 @@ class HistoryScreen extends ConsumerStatefulWidget {
 
 class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   SyncStatus? _statusFilter;
+  bool _syncing = false;
 
   @override
   Widget build(BuildContext context) {
@@ -31,15 +30,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         : reports
               .where((report) => report.syncStatus == _statusFilter)
               .toList();
-    final synced = reports
-        .where((report) => report.syncStatus == SyncStatus.synced)
-        .length;
-    final pending = reports
-        .where((report) => report.syncStatus == SyncStatus.pendingUpload)
-        .length;
-    final failed = reports
-        .where((report) => report.syncStatus == SyncStatus.failed)
-        .length;
+    int count(SyncStatus status) =>
+        reports.where((report) => report.syncStatus == status).length;
+    final synced = count(SyncStatus.synced);
+
     final grouped = <DateTime, List<Report>>{};
     for (final report in visible) {
       final day = DateTime(
@@ -50,142 +44,116 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       grouped.putIfAbsent(day, () => []).add(report);
     }
     final days = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
-    final colors = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const AridBrandTitle(subtitle: 'Adaptive Field Journal'),
-        actions: const [ThemeModeButton()],
-      ),
-      body: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            color: colors.surface,
-            padding: const EdgeInsets.fromLTRB(16, 18, 8, 14),
-            child: Row(
+    final summary = reports.isEmpty
+        ? null
+        : synced == reports.length
+        ? '${reports.length} reports · all synced'
+        : '${reports.length} reports · ${reports.length - synced} not synced';
+
+    return LargeTitlePage(
+      title: 'History',
+      subtitle: summary,
+      actions: [
+        IconButton(
+          tooltip: 'Sync now',
+          onPressed: _syncing ? null : _sync,
+          icon: _syncing
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2.4),
+                )
+              : const Icon(Icons.sync_rounded),
+        ),
+      ],
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'History',
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        '${reports.length} reports · '
-                        '${reports.isNotEmpty && synced == reports.length ? 'all synced' : '$synced synced'}',
-                        style: TextStyle(
-                          color: colors.onSurfaceVariant,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
+                _FilterChip(
+                  label: 'All',
+                  count: reports.length,
+                  selected: _statusFilter == null,
+                  onTap: () => setState(() => _statusFilter = null),
                 ),
-                IconButton(
-                  tooltip: 'Sync now',
-                  onPressed: _sync,
-                  icon: Icon(
-                    Icons.sync_rounded,
-                    color: colors.primary,
-                    size: 24,
-                  ),
+                _FilterChip(
+                  label: 'Waiting',
+                  count: count(SyncStatus.pendingUpload),
+                  selected: _statusFilter == SyncStatus.pendingUpload,
+                  onTap: () =>
+                      setState(() => _statusFilter = SyncStatus.pendingUpload),
+                ),
+                _FilterChip(
+                  label: 'Failed',
+                  count: count(SyncStatus.failed),
+                  selected: _statusFilter == SyncStatus.failed,
+                  onTap: () =>
+                      setState(() => _statusFilter = SyncStatus.failed),
+                ),
+                _FilterChip(
+                  label: 'Synced',
+                  count: synced,
+                  selected: _statusFilter == SyncStatus.synced,
+                  onTap: () =>
+                      setState(() => _statusFilter = SyncStatus.synced),
                 ),
               ],
             ),
           ),
-          Container(
-            decoration: BoxDecoration(
-              color: colors.surface,
-              border: Border(bottom: BorderSide(color: colors.outlineVariant)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _FilterButton(
-                      label: 'All',
-                      count: reports.length,
-                      selected: _statusFilter == null,
-                      onTap: () => setState(() => _statusFilter = null),
-                    ),
+        ),
+        if (visible.isEmpty)
+          SliverToBoxAdapter(
+            child: _statusFilter == null
+                ? const EmptyState(
+                    icon: Icons.photo_camera_outlined,
+                    title: 'No reports yet',
+                    message: 'Reports you capture appear here, grouped by day.',
+                  )
+                : const EmptyState(
+                    icon: Icons.filter_list_rounded,
+                    title: 'Nothing here',
+                    message: 'No reports match this filter.',
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _FilterButton(
-                      label: 'Pending',
-                      count: pending,
-                      selected: _statusFilter == SyncStatus.pendingUpload,
-                      onTap: () => setState(
-                        () => _statusFilter = SyncStatus.pendingUpload,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _FilterButton(
-                      label: 'Failed',
-                      count: failed,
-                      selected: _statusFilter == SyncStatus.failed,
-                      onTap: () =>
-                          setState(() => _statusFilter = SyncStatus.failed),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _FilterButton(
-                      label: 'Synced',
-                      count: synced,
-                      selected: _statusFilter == SyncStatus.synced,
-                      onTap: () =>
-                          setState(() => _statusFilter = SyncStatus.synced),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          )
+        else
+          SliverList.builder(
+            itemCount: days.length,
+            itemBuilder: (context, index) =>
+                _DayGroup(day: days[index], reports: grouped[days[index]]!),
           ),
-          Expanded(
-            child: visible.isEmpty
-                ? _EmptyHistory(filterActive: _statusFilter != null)
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-                    itemCount: days.length,
-                    itemBuilder: (context, dayIndex) {
-                      final day = days[dayIndex];
-                      final dayReports = grouped[day]!;
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 18),
-                        child: _DayGroup(day: day, reports: dayReports),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
+      ],
     );
   }
 
   Future<void> _sync() async {
-    final result = await ref.read(syncServiceProvider).syncPending();
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          result.message ??
-              'Uploaded ${result.uploaded}, failed ${result.failed}',
+    setState(() => _syncing = true);
+    try {
+      final result = await ref.read(syncServiceProvider).syncPending();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.message ??
+                (result.failed == 0
+                    ? 'Synced ${result.uploaded} reports.'
+                    : 'Synced ${result.uploaded}. ${result.failed} failed — '
+                          'they’ll retry automatically.'),
+          ),
         ),
-      ),
-    );
+      );
+    } finally {
+      if (mounted) setState(() => _syncing = false);
+    }
   }
 }
 
-class _FilterButton extends StatelessWidget {
-  const _FilterButton({
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
     required this.label,
     required this.count,
     required this.selected,
@@ -199,56 +167,11 @@ class _FilterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Material(
-      color: selected ? colors.primaryContainer : colors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: BorderSide(
-          color: selected ? colors.primary : colors.outlineVariant,
-        ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 9),
-          child: Row(
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  color: selected
-                      ? colors.onPrimaryContainer
-                      : colors.onSurfaceVariant,
-                  fontSize: 11,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: selected
-                      ? colors.primary.withValues(alpha: 0.12)
-                      : colors.surfaceContainer,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  '$count',
-                  style: TextStyle(
-                    color: selected
-                        ? colors.onPrimaryContainer
-                        : colors.onSurfaceVariant,
-                  fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return ChoiceChip(
+      label: Text('$label $count'),
+      selected: selected,
+      materialTapTargetSize: MaterialTapTargetSize.padded,
+      onSelected: (_) => onTap(),
     );
   }
 }
@@ -264,196 +187,28 @@ class _DayGroup extends StatelessWidget {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final label = day == today
-        ? 'Today · ${DateFormat.yMMMd().format(day)}'
-        : DateFormat.yMMMMd().format(day);
-    final colors = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+        ? 'Today'
+        : day == today.subtract(const Duration(days: 1))
+        ? 'Yesterday'
+        : DateFormat.yMMMMEEEEd().format(day);
+    return GroupedSection(
+      header: label,
+      smallHeader: true,
+      dividerIndent: 86,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 9),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: colors.onSurfaceVariant,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
+        for (final report in reports)
+          ReportRow(
+            report: report,
+            meta: DateFormat('h:mm a').format(report.capturedAt),
+            onTap: () => showReportDetail(context, report),
+            trailing: _ReportMenu(report: report),
           ),
-        ),
-        Container(
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: colors.outlineVariant),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: [
-              for (var index = 0; index < reports.length; index++) ...[
-                _HistoryRow(report: reports[index]),
-                if (index != reports.length - 1)
-                  Divider(height: 1, indent: 88, color: colors.outlineVariant),
-              ],
-            ],
-          ),
-        ),
       ],
     );
   }
 }
 
-class _HistoryRow extends ConsumerWidget {
-  const _HistoryRow({required this.report});
-
-  final Report report;
-
-  Color _riskColor() => switch (report.riskLevel) {
-    RiskLevel.red => AppColors.riskRed,
-    RiskLevel.yellow => AppColors.riskYellow,
-    RiskLevel.green => AppColors.riskGreen,
-  };
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final colors = Theme.of(context).colorScheme;
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(width: 4, color: _riskColor()),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 13, 8, 13),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: File(report.imagePath).existsSync()
-                        ? Image.file(
-                            File(report.imagePath),
-                            width: 64,
-                            height: 76,
-                            fit: BoxFit.cover,
-                          )
-                        : Container(
-                            width: 64,
-                            height: 76,
-                            color: colors.surfaceContainerLow,
-                            child: Icon(
-                              Icons.image_not_supported_outlined,
-                              color: colors.onSurfaceVariant,
-                            ),
-                          ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            RiskBadge(level: report.riskLevel, compact: true),
-                            const Spacer(),
-                            SyncStatusChip(status: report.syncStatus),
-                            if (report.syncStatus != SyncStatus.synced)
-                              _ReportMenu(report: report),
-                          ],
-                        ),
-                        const SizedBox(height: 7),
-                        Text(
-                          report.classification == Classification.breeding
-                              ? 'Breeding site'
-                              : 'Non-breeding',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                DateFormat('h:mm a').format(report.capturedAt),
-                                style: TextStyle(
-                                  color: colors.onSurfaceVariant,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                            TextButton(
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 4,
-                                  vertical: 2,
-                                ),
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              onPressed: () => _labelGroundTruth(context, ref),
-                              child: Text(
-                                report.groundTruth == GroundTruth.unlabeled
-                                    ? 'Label truth'
-                                    : 'Truth: ${_truthLabel(report.groundTruth)}',
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _truthLabel(GroundTruth truth) => switch (truth) {
-    GroundTruth.breeding => 'breeding',
-    GroundTruth.nonBreeding => 'not breeding',
-    GroundTruth.unlabeled => 'unlabeled',
-  };
-
-  Future<void> _labelGroundTruth(BuildContext context, WidgetRef ref) async {
-    final choice = await showModalBottomSheet<GroundTruth>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.check_circle_outline),
-              title: const Text('Breeding (actual)'),
-              onTap: () => Navigator.pop(context, GroundTruth.breeding),
-            ),
-            ListTile(
-              leading: const Icon(Icons.cancel_outlined),
-              title: const Text('Non-breeding (actual)'),
-              onTap: () => Navigator.pop(context, GroundTruth.nonBreeding),
-            ),
-            ListTile(
-              leading: const Icon(Icons.remove_circle_outline),
-              title: const Text('Unlabeled'),
-              onTap: () => Navigator.pop(context, GroundTruth.unlabeled),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (choice == null) return;
-    report.groundTruth = choice;
-    await ref.read(reportRepositoryProvider).update(report);
-  }
-}
-
-enum _ReportAction { retry, editPin, delete }
+enum _ReportAction { details, retry, editPin, delete }
 
 class _ReportMenu extends ConsumerWidget {
   const _ReportMenu({required this.report});
@@ -462,15 +217,37 @@ class _ReportMenu extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final local = report.syncStatus != SyncStatus.synced;
+    final danger = context.arid.high.ink;
     return PopupMenuButton<_ReportAction>(
       tooltip: 'Report actions',
-      padding: EdgeInsets.zero,
-      iconSize: 19,
+      icon: Icon(Icons.more_horiz_rounded, color: context.arid.secondaryInk),
+      position: PopupMenuPosition.under,
       onSelected: (action) => _handle(action, context, ref),
-      itemBuilder: (context) => const [
-        PopupMenuItem(value: _ReportAction.retry, child: Text('Retry sync')),
-        PopupMenuItem(value: _ReportAction.editPin, child: Text('Edit pin')),
-        PopupMenuItem(value: _ReportAction.delete, child: Text('Delete')),
+      itemBuilder: (context) => [
+        const PopupMenuItem(
+          value: _ReportAction.details,
+          child: _MenuLabel(Icons.fact_check_outlined, 'Label actual result'),
+        ),
+        if (local) ...[
+          const PopupMenuItem(
+            value: _ReportAction.retry,
+            child: _MenuLabel(Icons.sync_rounded, 'Retry sync'),
+          ),
+          const PopupMenuItem(
+            value: _ReportAction.editPin,
+            child: _MenuLabel(Icons.edit_location_alt_outlined, 'Move pin'),
+          ),
+          const PopupMenuDivider(),
+          PopupMenuItem(
+            value: _ReportAction.delete,
+            child: _MenuLabel(
+              Icons.delete_outline_rounded,
+              'Delete',
+              color: danger,
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -481,6 +258,8 @@ class _ReportMenu extends ConsumerWidget {
     WidgetRef ref,
   ) async {
     switch (action) {
+      case _ReportAction.details:
+        await showReportDetail(context, report);
       case _ReportAction.retry:
         await ref.read(syncQueueRepositoryProvider).enqueue(report.id);
         final result = await ref.read(syncServiceProvider).syncPending();
@@ -488,7 +267,10 @@ class _ReportMenu extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              result.message ?? 'Retry finished: ${result.uploaded} uploaded',
+              result.message ??
+                  (result.uploaded > 0
+                      ? 'Report synced.'
+                      : 'Still not synced. It will retry automatically.'),
             ),
           ),
         );
@@ -500,46 +282,67 @@ class _ReportMenu extends ConsumerWidget {
           ),
         );
       case _ReportAction.delete:
-        await ref.read(reportRepositoryProvider).deleteLocal(report.id);
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Delete this report?'),
+            content: const Text(
+              'It hasn’t synced yet, so deleting removes it for good.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: context.arid.high.ink,
+                ),
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Delete report'),
+              ),
+            ],
+          ),
+        );
+        if (confirmed != true || !context.mounted) return;
+        try {
+          await ref.read(reportRepositoryProvider).deleteLocal(report.id);
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Report deleted.')));
+        } catch (_) {
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Couldn’t delete this report — it may have just synced.',
+              ),
+            ),
+          );
+        }
     }
   }
 }
 
-class _EmptyHistory extends StatelessWidget {
-  const _EmptyHistory({required this.filterActive});
+class _MenuLabel extends StatelessWidget {
+  const _MenuLabel(this.icon, this.label, {this.color});
 
-  final bool filterActive;
+  final IconData icon;
+  final String label;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.inbox_outlined,
-              color: colors.onSurfaceVariant,
-              size: 32,
-            ),
-            const SizedBox(height: 10),
-            Text(
-              filterActive ? 'No reports in this filter' : 'No reports yet',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              filterActive
-                  ? 'Choose another status to see more activity.'
-                  : 'Captured reports will appear here.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: colors.onSurfaceVariant),
-            ),
-          ],
+    final c = color ?? context.arid.ink;
+    return Row(
+      children: [
+        Expanded(
+          child: Text(label, style: TextStyle(color: c, fontSize: 17)),
         ),
-      ),
+        const SizedBox(width: 16),
+        Icon(icon, size: 20, color: c),
+      ],
     );
   }
 }

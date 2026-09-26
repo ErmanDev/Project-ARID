@@ -133,6 +133,14 @@ export function useUsers(enabled: boolean) {
               displayName: asString(data.displayName, 'Field worker'),
               totalPoints: asNumber(data.totalPoints),
               reportCount: asNumber(data.reportCount),
+              // The mobile app writes this on every upsert, but documents
+              // synced by older builds will not have it. Absent means
+              // "unknown", which is not the same as "none verified".
+              verifiedPoints:
+                typeof data.verifiedPoints === 'number' &&
+                Number.isFinite(data.verifiedPoints)
+                  ? data.verifiedPoints
+                  : null,
             }
           }),
         )

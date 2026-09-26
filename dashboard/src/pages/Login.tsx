@@ -28,26 +28,24 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-full items-center justify-center bg-bg px-4 py-10">
+    <div className="auth-workspace flex min-h-full items-center justify-center bg-bg px-4 py-10">
       <main className="w-full max-w-[26rem]">
         <div className="mb-3 flex justify-end">
           <ThemeToggle />
         </div>
         <div className="rounded-panel border border-border bg-surface p-7 shadow-md">
           <img src="/arid-logo.png" alt="" className="size-12" />
-          <h1 className="mt-4 text-xl font-semibold tracking-tight text-ink">
-            Staff sign-in
+          <p className="eyebrow mt-6">A.R.I.D. staff workspace</p>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-ink">
+            Welcome back.
           </h1>
           <p className="mt-1.5 text-base text-muted">
-            A.R.I.D. breeding-site monitoring for LGU and health-worker accounts.
-            Field capture stays on the mobile app.
+            A clearer view of your community starts here. Sign in to monitor reports and inspect potential breeding sites.
           </p>
 
           {!auth.configured ? (
             <Alert tone="warning" className="mt-6">
-              Firebase is not configured. Copy{' '}
-              <code>dashboard/.env.example</code> to <code>dashboard/.env</code>{' '}
-              using the same project as the mobile app.
+              This workspace is not connected yet. Ask your administrator to complete sign-in setup.
             </Alert>
           ) : (
             <div className="mt-6 space-y-4">
@@ -71,9 +69,8 @@ export function LoginPage() {
           )}
         </div>
 
-        <p className="mt-4 px-1 text-center text-xs text-muted">
-          Access requires a <code>staff</code> record in Firestore. Ask an
-          administrator if sign-in succeeds but the dashboard denies you.
+        <p className="mt-4 px-1 auth-note text-center text-xs">
+          For authorized LGU and health-worker accounts. Need access? Contact your administrator.
         </p>
       </main>
     </div>

@@ -7,7 +7,7 @@ import '../../../data/repositories/config_repository.dart';
 import '../../../providers.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/common.dart';
-import '../../widgets/theme_mode_button.dart';
+import '../../widgets/large_title_page.dart';
 import '../rewards/rewards_screen.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -22,6 +22,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _cloudName = TextEditingController();
   final _uploadPreset = TextEditingController();
   bool _nameReady = false;
+  bool _syncing = false;
 
   @override
   void initState() {
@@ -48,206 +49,303 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     super.dispose();
   }
 
+  void _toast(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _saveName() async {
+    final profile = ref.read(profileProvider).valueOrNull;
+    if (profile == null) return;
+    final name = _name.text.trim();
+    if (name.isEmpty) {
+      _name.text = profile.displayName;
+      return;
+    }
+    profile.displayName = name;
+    await ref.read(userRepositoryProvider).save(profile);
+    if (!mounted) return;
+    FocusScope.of(context).unfocus();
+    _toast('Name saved.');
+  }
+
+  Future<void> _savePhotoSettings() async {
+    final config = ref.read(configRepositoryProvider);
+    await config.set(ConfigKeys.cloudinaryCloudName, _cloudName.text.trim());
+    await config.set(
+      ConfigKeys.cloudinaryUploadPreset,
+      _uploadPreset.text.trim().isEmpty
+          ? 'arid_unsigned'
+          : _uploadPreset.text.trim(),
+    );
+    if (!mounted) return;
+    FocusScope.of(context).unfocus();
+    _toast('Photo upload settings saved.');
+  }
+
+  Future<void> _sync() async {
+    setState(() => _syncing = true);
+    try {
+      final result = await ref.read(syncServiceProvider).syncPending();
+      if (!mounted) return;
+      _toast(
+        result.message ??
+            (result.failed == 0
+                ? 'Synced ${result.uploaded} reports.'
+                : 'Synced ${result.uploaded}. ${result.failed} failed — '
+                      'they’ll retry automatically.'),
+      );
+    } finally {
+      if (mounted) setState(() => _syncing = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final p = context.arid;
     final profile = ref.watch(profileProvider).valueOrNull;
     final reports = ref.watch(reportsProvider).valueOrNull ?? const <Report>[];
     final online = ref.watch(isOnlineProvider);
+    final themeMode = ref.watch(themeModeProvider);
     if (profile != null && !_nameReady) {
       _name.text = profile.displayName;
       _nameReady = true;
     }
     final matrix = ref.watch(evaluationExportProvider).matrix(reports);
+    final displayName = (profile?.displayName.trim().isNotEmpty ?? false)
+        ? profile!.displayName.trim()
+        : 'Reporter';
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-        actions: const [ThemeModeButton()],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          OfflineBanner(online: online),
-          const SizedBox(height: 12),
-          SectionCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: _name,
-                  decoration: const InputDecoration(labelText: 'Display name'),
-                ),
-                const SizedBox(height: 12),
-                FilledButton(
-                  onPressed: profile == null
-                      ? null
-                      : () async {
-                          profile.displayName = _name.text.trim().isEmpty
-                              ? profile.displayName
-                              : _name.text.trim();
-                          await ref.read(userRepositoryProvider).save(profile);
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Name saved on this device.'),
+    return LargeTitlePage(
+      title: 'Profile',
+      slivers: [
+        SliverList.list(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              child: SectionCard(
+                child: Row(
+                  children: [
+                    _Avatar(name: displayName),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            displayName,
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${profile?.reportCount ?? 0} reports · '
+                            '${profile?.totalPoints ?? 0} points',
+                            style: TextStyle(
+                              color: p.secondaryInk,
+                              fontSize: 15,
                             ),
-                          );
-                        },
-                  child: const Text('Save name'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'Device ID: ${profile?.id ?? '—'}',
-                  style: TextStyle(color: context.aridMuted, fontSize: 12),
-                ),
-              ],
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          ListTile(
-            tileColor: context.aridSurface,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: context.aridBorder),
-            ),
-            leading: const Icon(
-              Icons.stars_outlined,
-              color: AppColors.secondary,
-            ),
-            title: const Text('Rewards & points'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const RewardsScreen())),
-          ),
-          const SizedBox(height: 12),
-          SectionCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            GroupedSection(
+              header: 'Name',
+              footer: 'Stored on this device and attached to your reports.',
               children: [
-                Text(
-                  'Photo hosting (Cloudinary, free)',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Firebase Storage is not used. Create a free Cloudinary account (no credit card), add an Unsigned upload preset, then paste the cloud name and preset here. Photos still save on-device first.',
-                  style: TextStyle(color: context.aridMuted, fontSize: 12),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _cloudName,
-                  decoration: const InputDecoration(
-                    labelText: 'Cloud name',
-                    hintText: 'dhoi760j1',
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                  child: TextField(
+                    controller: _name,
+                    textCapitalization: TextCapitalization.words,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _saveName(),
+                    decoration: const InputDecoration(
+                      labelText: 'Display name',
+                    ),
                   ),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _uploadPreset,
-                  decoration: const InputDecoration(
-                    labelText: 'Unsigned upload preset',
-                    hintText: 'arid_unsigned',
+                GroupedRow(
+                  title: 'Save name',
+                  accent: true,
+                  onTap: profile == null ? null : _saveName,
+                ),
+              ],
+            ),
+            GroupedSection(
+              dividerIndent: 60,
+              children: [
+                GroupedRow(
+                  leading: const IconTile(
+                    icon: Icons.star_rounded,
+                    color: AppColors.amber,
+                  ),
+                  title: 'Rewards',
+                  value: '${profile?.totalPoints ?? 0} pts',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const RewardsScreen()),
                   ),
                 ),
-                const SizedBox(height: 12),
-                FilledButton(
-                  onPressed: () async {
-                    await ref
-                        .read(configRepositoryProvider)
-                        .set(
-                          ConfigKeys.cloudinaryCloudName,
-                          _cloudName.text.trim(),
-                        );
-                    await ref
-                        .read(configRepositoryProvider)
-                        .set(
-                          ConfigKeys.cloudinaryUploadPreset,
-                          _uploadPreset.text.trim().isEmpty
-                              ? 'arid_unsigned'
-                              : _uploadPreset.text.trim(),
-                        );
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Cloudinary settings saved on this device.',
-                        ),
+                PopupMenuButton<ThemeMode>(
+                  tooltip: 'Appearance',
+                  initialValue: themeMode,
+                  position: PopupMenuPosition.under,
+                  onSelected: ref.read(themeModeProvider.notifier).setMode,
+                  itemBuilder: (context) => [
+                    for (final mode in [
+                      ThemeMode.system,
+                      ThemeMode.light,
+                      ThemeMode.dark,
+                    ])
+                      CheckedPopupMenuItem(
+                        value: mode,
+                        checked: mode == themeMode,
+                        child: Text(_modeLabel(mode)),
                       ),
-                    );
-                  },
-                  child: const Text('Save Cloudinary settings'),
+                  ],
+                  child: GroupedRow(
+                    leading: const IconTile(
+                      icon: Icons.contrast_rounded,
+                      color: AppColors.slate,
+                    ),
+                    title: 'Appearance',
+                    value: _modeLabel(themeMode),
+                    trailing: Icon(
+                      Icons.unfold_more_rounded,
+                      size: 20,
+                      color: p.tertiaryInk,
+                    ),
+                  ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 12),
-          SectionCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            GroupedSection(
+              header: 'Sync',
+              footer:
+                  'Reports upload when you’re online. You can keep capturing '
+                  'while they wait.',
               children: [
-                Text(
-                  'Cloud sync',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                GroupedRow(
+                  title: 'Connection',
+                  value: online ? 'Online' : 'Offline',
+                  leading: Icon(
+                    online ? Icons.wifi_rounded : Icons.wifi_off_rounded,
+                    color: online ? p.low.fill : p.moderate.fill,
+                  ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Sync never blocks capture or map. Metadata goes to Firestore; photos go to Cloudinary. If either is missing, reports stay queued locally.',
-                  style: TextStyle(color: context.aridMuted, fontSize: 12),
-                ),
-                const SizedBox(height: 12),
-                FilledButton(
-                  onPressed: () async {
-                    final result = await ref
-                        .read(syncServiceProvider)
-                        .syncPending();
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          result.message ??
-                              'Uploaded ${result.uploaded}, failed ${result.failed}',
-                        ),
-                      ),
-                    );
-                  },
-                  child: const Text('Sync now'),
+                GroupedRow(
+                  title: _syncing ? 'Syncing…' : 'Sync now',
+                  accent: true,
+                  onTap: _syncing ? null : _sync,
+                  trailing: _syncing
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2.2),
+                        )
+                      : null,
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 12),
-          SectionCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            GroupedSection(
+              header: 'Photo upload',
+              footer:
+                  'Use the Cloudinary details from your project '
+                  'administrator. Photos stay on this device until they sync.',
               children: [
-                const Text(
-                  'Evaluation export (Chapter III)',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
+                  child: TextField(
+                    controller: _cloudName,
+                    autocorrect: false,
+                    decoration: const InputDecoration(
+                      labelText: 'Cloud name',
+                      hintText: 'dhoi760j1',
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Labeled ${matrix.labeled}  ·  TP ${matrix.tp}  TN ${matrix.tn}  FP ${matrix.fp}  FN ${matrix.fn}\n'
-                  'Accuracy ${(matrix.accuracy * 100).toStringAsFixed(1)}%  ·  unlabeled ${matrix.unlabeled}',
-                  style: TextStyle(color: context.aridMuted),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
+                  child: TextField(
+                    controller: _uploadPreset,
+                    autocorrect: false,
+                    decoration: const InputDecoration(
+                      labelText: 'Unsigned upload preset',
+                      hintText: 'arid_unsigned',
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 12),
-                OutlinedButton(
-                  onPressed: () => _export(reports, json: false),
-                  child: const Text('Export CSV'),
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton(
-                  onPressed: () => _export(reports, json: true),
-                  child: const Text('Export JSON'),
+                GroupedRow(
+                  title: 'Save upload settings',
+                  accent: true,
+                  onTap: _savePhotoSettings,
                 ),
               ],
             ),
-          ),
-        ],
-      ),
+            GroupedSection(
+              header: 'Model evaluation',
+              footer:
+                  'Compares photo results with what you found on site '
+                  '(Chapter III). Label actual results from History.',
+              children: [
+                GroupedRow(
+                  title: 'Labeled reports',
+                  value: '${matrix.labeled}',
+                ),
+                GroupedRow(
+                  title: 'Accuracy',
+                  value: matrix.labeled == 0
+                      ? '—'
+                      : '${(matrix.accuracy * 100).toStringAsFixed(1)}%',
+                ),
+                GroupedRow(
+                  title: 'TP · TN · FP · FN',
+                  value:
+                      '${matrix.tp} · ${matrix.tn} · ${matrix.fp} · ${matrix.fn}',
+                ),
+                GroupedRow(
+                  title: 'Export as CSV',
+                  accent: true,
+                  onTap: () => _export(reports, json: false),
+                  trailing: Icon(
+                    Icons.ios_share_rounded,
+                    size: 20,
+                    color: p.accent,
+                  ),
+                ),
+                GroupedRow(
+                  title: 'Export as JSON',
+                  accent: true,
+                  onTap: () => _export(reports, json: true),
+                  trailing: Icon(
+                    Icons.ios_share_rounded,
+                    size: 20,
+                    color: p.accent,
+                  ),
+                ),
+              ],
+            ),
+            GroupedSection(
+              header: 'About',
+              children: [
+                GroupedRow(title: 'Device ID', subtitle: profile?.id ?? '—'),
+              ],
+            ),
+          ],
+        ),
+      ],
     );
   }
+
+  static String _modeLabel(ThemeMode mode) => switch (mode) {
+    ThemeMode.system => 'Match device',
+    ThemeMode.light => 'Light',
+    ThemeMode.dark => 'Dark',
+  };
 
   Future<void> _export(List<Report> reports, {required bool json}) async {
     final service = ref.read(evaluationExportProvider);
@@ -257,5 +355,39 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       extension: json ? 'json' : 'csv',
     );
     await SharePlus.instance.share(ShareParams(files: [XFile(file.path)]));
+  }
+}
+
+class _Avatar extends StatelessWidget {
+  const _Avatar({required this.name});
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.arid;
+    final initials = name
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .take(2)
+        .map((part) => part[0].toUpperCase())
+        .join();
+    final size = MediaQuery.textScalerOf(context).scale(56).clamp(56.0, 80.0);
+    return ExcludeSemantics(
+      child: Container(
+        width: size,
+        height: size,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(color: p.accentTint, shape: BoxShape.circle),
+        child: Text(
+          initials.isEmpty ? '?' : initials,
+          style: TextStyle(
+            color: p.accentInk,
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
   }
 }

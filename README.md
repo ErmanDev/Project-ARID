@@ -6,11 +6,16 @@ Offline-first Flutter app: capture, on-device classification, GPS tagging, map, 
 
 ## Run
 
+The mobile interface follows the project-local [Apple Design guidance](MOBILE_DESIGN.md).
+
 ```bash
 flutter pub get
 dart run build_runner build --delete-conflicting-outputs
 flutter run
 ```
+
+On a fresh checkout, copy `lib/config/local_secrets.example.dart` to
+`lib/config/local_secrets.dart` before running. The map key can be left empty.
 
 ## Teachable Machine model
 

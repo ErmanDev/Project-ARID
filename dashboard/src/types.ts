@@ -28,6 +28,16 @@ export type UserProfile = {
   displayName: string
   totalPoints: number
   reportCount: number
+  /**
+   * Points confirmed after a successful sync. The mobile app awards points
+   * on-device at submission (provisional); they become verified once the
+   * upload lands, so total minus verified is the amount still in flight.
+   *
+   * null when the synced document predates the field: unknown, not zero. The
+   * leaderboard then draws a plain bar rather than claiming nothing has been
+   * verified.
+   */
+  verifiedPoints: number | null
 }
 
 export type Area = {

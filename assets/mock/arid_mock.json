@@ -5,19 +5,36 @@
       "id": "mock-user-ana",
       "displayName": "Ana Reyes",
       "totalPoints": 86,
+      "verifiedPoints": 72,
       "reportCount": 7
     },
     {
       "id": "mock-user-ben",
       "displayName": "Ben Santos",
       "totalPoints": 54,
+      "verifiedPoints": 54,
       "reportCount": 5
     },
     {
       "id": "mock-user-cat",
       "displayName": "Catherine Lim",
       "totalPoints": 41,
+      "verifiedPoints": 30,
       "reportCount": 4
+    },
+    {
+      "id": "mock-user-dina",
+      "displayName": "Dina Ocampo",
+      "totalPoints": 33,
+      "verifiedPoints": 33,
+      "reportCount": 3
+    },
+    {
+      "id": "mock-user-marco",
+      "displayName": "Marco Villanueva",
+      "totalPoints": 18,
+      "verifiedPoints": 6,
+      "reportCount": 2
     }
   ],
   "reports": [
