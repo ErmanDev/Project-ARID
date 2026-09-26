@@ -1,4 +1,4 @@
-import type { InferenceSession, Tensor } from 'onnxruntime-web'
+import type { InferenceSession, Tensor } from 'onnxruntime-web/wasm'
 
 export const DETECTION_CLASSES = [
   'Bottle',
@@ -32,25 +32,76 @@ const INPUT_SIZE = 640
 const CONFIDENCE_THRESHOLD = 0.25
 const IOU_THRESHOLD = 0.45
 const MAX_DETECTIONS = 100
+// Bump when the model file changes so browsers drop the cached copy.
+const MODEL_CACHE = 'arid-detector-v3'
+const DOWNLOAD_ATTEMPTS = 3
 
-type OrtRuntime = typeof import('onnxruntime-web')
+// The CPU-only build: its WASM is half the size of the default bundle, which
+// also ships WebGPU support this page never uses.
+type OrtRuntime = typeof import('onnxruntime-web/wasm')
 
 let runtimePromise: Promise<OrtRuntime> | null = null
 let sessionPromise: Promise<InferenceSession> | null = null
 
 function loadRuntime(): Promise<OrtRuntime> {
-  runtimePromise ??= import('onnxruntime-web')
+  runtimePromise ??= import('onnxruntime-web/wasm')
   return runtimePromise
+}
+
+async function downloadModel(): Promise<ArrayBuffer> {
+  let lastError: unknown
+  for (let attempt = 1; attempt <= DOWNLOAD_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetch(MODEL_URL)
+      if (!response.ok) throw new Error(`Model download failed (HTTP ${response.status}).`)
+      return await response.arrayBuffer()
+    } catch (error) {
+      lastError = error
+      if (attempt < DOWNLOAD_ATTEMPTS) {
+        await new Promise((resolve) => setTimeout(resolve, 1000 * attempt))
+      }
+    }
+  }
+  throw new Error(
+    'The detection model could not be downloaded. Check your connection and try again.',
+    { cause: lastError },
+  )
+}
+
+/**
+ * The model is ~28 MB, so it is kept in Cache Storage after the first
+ * successful download. A dropped connection is retried instead of failing.
+ */
+async function loadModelBytes(): Promise<ArrayBuffer> {
+  const cache = await caches.open(MODEL_CACHE).catch(() => null)
+  const cached = await cache?.match(MODEL_URL)
+  if (cached) return cached.arrayBuffer()
+
+  const bytes = await downloadModel()
+  if (cache) {
+    void cache.put(MODEL_URL, new Response(bytes.slice(0))).catch(() => undefined)
+    void caches
+      .keys()
+      .then((names) =>
+        Promise.all(
+          names
+            .filter((name) => name.startsWith('arid-detector-') && name !== MODEL_CACHE)
+            .map((name) => caches.delete(name)),
+        ),
+      )
+      .catch(() => undefined)
+  }
+  return bytes
 }
 
 function loadSession(): Promise<InferenceSession> {
   if (!sessionPromise) {
-    sessionPromise = loadRuntime()
-      .then((ort) => {
+    sessionPromise = Promise.all([loadRuntime(), loadModelBytes()])
+      .then(([ort, bytes]) => {
         // Firebase Hosting does not set cross-origin isolation headers by default.
         // A single WASM thread works consistently without SharedArrayBuffer.
         ort.env.wasm.numThreads = 1
-        return ort.InferenceSession.create(MODEL_URL, {
+        return ort.InferenceSession.create(new Uint8Array(bytes), {
           executionProviders: ['wasm'],
           graphOptimizationLevel: 'all',
         })
