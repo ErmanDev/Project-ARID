@@ -19,12 +19,15 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
-// tflite_flutter pins Java 11; Kotlin 2.x defaults to 21.
+// onnxruntime pins compileSdk 33, but the app's AndroidX dependencies need 34+.
 subprojects {
-    if (name != "tflite_flutter") return@subprojects
-    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-        compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+    if (name != "onnxruntime") return@subprojects
+    val raiseCompileSdk = {
+        extensions.configure<com.android.build.api.dsl.LibraryExtension>("android") {
+            compileSdk = 36
+        }
     }
+    if (state.executed) raiseCompileSdk() else afterEvaluate { raiseCompileSdk() }
 }
 
 // workmanager_android skips applying KGP on AGP 9, but this app keeps
