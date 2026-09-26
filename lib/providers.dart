@@ -156,6 +156,9 @@ class ClassificationDraft {
     required this.riskLevel,
     required this.label,
     required this.usedOnDeviceModel,
+    this.detections = const [],
+    this.imageWidth = 0,
+    this.imageHeight = 0,
   });
 
   final String reportId;
@@ -165,6 +168,9 @@ class ClassificationDraft {
   final RiskLevel riskLevel;
   final String label;
   final bool usedOnDeviceModel;
+  final List<Detection> detections;
+  final double imageWidth;
+  final double imageHeight;
 }
 
 class ConfirmReportInput {
@@ -215,6 +221,9 @@ final classifyCaptureProvider =
           riskLevel: risk,
           label: classified.label,
           usedOnDeviceModel: classified.usedOnDeviceModel,
+          detections: classified.detections,
+          imageWidth: classified.imageWidth,
+          imageHeight: classified.imageHeight,
         );
       };
     });

@@ -11,6 +11,7 @@ import '../../../providers.dart';
 import '../../../services/location/location_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/common.dart';
+import '../../widgets/detection_photo.dart';
 import '../../widgets/large_title_page.dart';
 import 'pin_drop_screen.dart';
 import 'result_screen.dart';
@@ -156,6 +157,7 @@ class _RemarksScreenState extends ConsumerState<RemarksScreen> {
     final isBreeding = draft.classification == Classification.breeding;
     final fix = _locationPreview;
     final percent = (draft.confidenceScore * 100).clamp(0, 100);
+    final count = draft.detections.length;
 
     return Stack(
       children: [
@@ -181,16 +183,11 @@ class _RemarksScreenState extends ConsumerState<RemarksScreen> {
               children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
-                    child: AspectRatio(
-                      aspectRatio: 4 / 3,
-                      child: Image.file(
-                        File(draft.imageFile.path),
-                        fit: BoxFit.cover,
-                        semanticLabel: 'Your photo',
-                      ),
-                    ),
+                  child: DetectionPhoto(
+                    file: File(draft.imageFile.path),
+                    detections: draft.detections,
+                    imageWidth: draft.imageWidth,
+                    imageHeight: draft.imageHeight,
                   ),
                 ),
                 Padding(
@@ -208,6 +205,21 @@ class _RemarksScreenState extends ConsumerState<RemarksScreen> {
                               : 'No breeding site found',
                           style: Theme.of(context).textTheme.headlineSmall,
                         ),
+                        if (draft.usedOnDeviceModel) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            isBreeding
+                                ? '$count ${count == 1 ? 'container' : 'containers'} '
+                                      'that can hold water. Check for water, '
+                                      'larvae, or mosquitoes.'
+                                : 'No bottles, coconut shells, drain inlets, '
+                                      'tires, or vases were found.',
+                            style: TextStyle(
+                              color: p.secondaryInk,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 16),
                         Row(
                           children: [
@@ -244,6 +256,25 @@ class _RemarksScreenState extends ConsumerState<RemarksScreen> {
                     ),
                   ),
                 ),
+                if (count > 0)
+                  GroupedSection(
+                    header: 'Found in this photo',
+                    footer:
+                        'A container marks a potential breeding place only. '
+                        'Field verification is still needed.',
+                    dividerIndent: 60,
+                    children: [
+                      for (final d in draft.detections)
+                        GroupedRow(
+                          leading: IconTile(
+                            icon: Icons.crop_free_rounded,
+                            color: detectionColor(d.classId),
+                          ),
+                          title: d.label,
+                          value: '${(d.confidence * 100).round()}%',
+                        ),
+                    ],
+                  ),
                 GroupedSection(
                   header: 'Location',
                   footer:
@@ -309,8 +340,8 @@ class _TestModelNote extends StatelessWidget {
         Expanded(
           child: Text(
             kDebugMode
-                ? 'Test model active. Add the trained model at '
-                      'assets/models/arid_model.tflite for real results.'
+                ? 'Test model active. The detector at '
+                      'assets/models/medsam_yolov5s.onnx failed to load.'
                 : 'This result comes from a test model and may be inaccurate.',
             style: Theme.of(context).textTheme.bodySmall,
           ),

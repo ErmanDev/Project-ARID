@@ -1,7 +1,8 @@
-Place your Teachable Machine TensorFlow Lite export here as:
+The on-device detector is:
 
-  arid_model.tflite
+  medsam_yolov5s.onnx
 
-Keep labels.txt in sync with the model's class names.
-Until the file is present, A.R.I.D. uses a deterministic on-device fallback so
-capture → classify → GPS → save still works fully offline.
+It must be identical to dashboard/public/models/medsam_yolov5s.onnx (YOLOv5s,
+640x640 input, opset 12, classes: Bottle, Coconut-Exocarp, Drain-Inlet, Tire,
+Vase). When retraining, export with tool/arid_yolov5_v2_colab.ipynb and copy
+the new .onnx to both places.

@@ -17,13 +17,18 @@ flutter run
 On a fresh checkout, copy `lib/config/local_secrets.example.dart` to
 `lib/config/local_secrets.dart` before running. The map key can be left empty.
 
-## Teachable Machine model
+## Breeding-container detector
 
-Export TFLite from Teachable Machine and place it at:
+The app runs the same YOLOv5s detector as the web dashboard, fully on device:
 
-`assets/models/arid_model.tflite`
+`assets/models/medsam_yolov5s.onnx`
 
-Update `assets/models/labels.txt` to match your class names. Until that file exists, a deterministic on-device fallback still produces local reports so the rest of the pipeline can be tested offline.
+It detects five potential breeding-container classes (Bottle, Coconut-Exocarp,
+Drain-Inlet, Tire, Vase). A photo is reported as a possible breeding site when
+at least one container is found. Keep this file identical to
+`dashboard/public/models/medsam_yolov5s.onnx` so both surfaces agree. If the
+model fails to load, a deterministic fallback still produces local reports so
+the rest of the pipeline can be tested offline.
 
 ## Firebase + Cloudinary (free)
 
