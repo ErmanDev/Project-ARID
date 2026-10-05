@@ -149,7 +149,9 @@ class AppTheme {
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(22),
-          side: highContrast ? BorderSide(color: p.separator) : BorderSide.none,
+          side: highContrast
+              ? BorderSide(color: p.separator)
+              : BorderSide(color: p.cardEdge),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(

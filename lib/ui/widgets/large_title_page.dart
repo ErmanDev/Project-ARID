@@ -56,75 +56,128 @@ class _LargeTitlePageState extends State<LargeTitlePage> {
     return Scaffold(
       extendBody: widget.bottomBar != null,
       bottomNavigationBar: widget.bottomBar,
-      body: NotificationListener<ScrollNotification>(
-        onNotification: _onScroll,
-        child: CustomScrollView(
-          slivers: [
-            SliverAppBar(
-              pinned: true,
-              automaticallyImplyLeading: widget.automaticallyImplyLeading,
-              backgroundColor: Colors.transparent,
-              toolbarHeight: 52,
-              title: MediaQuery.withClampedTextScaling(
-                maxScaleFactor: 1.3,
-                child: ExcludeSemantics(
-                  excluding: !_condensed,
-                  child: AnimatedOpacity(
-                    opacity: _condensed ? 1 : 0,
-                    duration: duration,
-                    child: Text(
-                      widget.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-              ),
-              actions: [...widget.actions, const SizedBox(width: 8)],
-              flexibleSpace: AnimatedSwitcher(
-                duration: duration,
-                child: _condensed
-                    ? _ScrollEdge(key: const ValueKey('edge'), palette: p)
-                    : const SizedBox.expand(key: ValueKey('clear')),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Large titles scale, but less than body text, so the
-                    // hierarchy survives the largest accessibility sizes.
-                    MediaQuery.withClampedTextScaling(
-                      maxScaleFactor: 1.5,
-                      child: Semantics(
-                        header: true,
+      body: Stack(
+        children: [
+          if (!p.highContrast) Positioned.fill(child: _TopGlow(palette: p)),
+          NotificationListener<ScrollNotification>(
+            onNotification: _onScroll,
+            child: CustomScrollView(
+              slivers: [
+                SliverAppBar(
+                  pinned: true,
+                  automaticallyImplyLeading: widget.automaticallyImplyLeading,
+                  backgroundColor: Colors.transparent,
+                  toolbarHeight: 52,
+                  title: MediaQuery.withClampedTextScaling(
+                    maxScaleFactor: 1.3,
+                    child: ExcludeSemantics(
+                      excluding: !_condensed,
+                      child: AnimatedOpacity(
+                        opacity: _condensed ? 1 : 0,
+                        duration: duration,
                         child: Text(
                           widget.title,
-                          style: theme.textTheme.headlineMedium,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ),
-                    if (widget.subtitle != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        widget.subtitle!,
-                        style: TextStyle(color: p.secondaryInk, fontSize: 15),
-                      ),
-                    ],
-                  ],
+                  ),
+                  actions: [...widget.actions, const SizedBox(width: 8)],
+                  flexibleSpace: AnimatedSwitcher(
+                    duration: duration,
+                    child: _condensed
+                        ? _ScrollEdge(key: const ValueKey('edge'), palette: p)
+                        : const SizedBox.expand(key: ValueKey('clear')),
+                  ),
                 ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Large titles scale, but less than body text, so the
+                        // hierarchy survives the largest accessibility sizes.
+                        MediaQuery.withClampedTextScaling(
+                          maxScaleFactor: 1.5,
+                          child: Semantics(
+                            header: true,
+                            child: Text(
+                              widget.title,
+                              style: theme.textTheme.headlineMedium,
+                            ),
+                          ),
+                        ),
+                        if (widget.subtitle != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            widget.subtitle!,
+                            style: TextStyle(
+                              color: p.secondaryInk,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                ...widget.slivers,
+                SliverToBoxAdapter(
+                  child: SizedBox(
+                    height: MediaQuery.paddingOf(context).bottom + 16,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A soft wash of the accent behind the large title, with a hint of indigo
+/// at the far corner, fading into the grouped background.
+class _TopGlow extends StatelessWidget {
+  const _TopGlow({required this.palette});
+
+  final AridPalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return IgnorePointer(
+      child: Stack(
+        children: [
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: const Alignment(0, -0.35),
+                colors: [
+                  palette.accent.withValues(alpha: dark ? 0.16 : 0.11),
+                  palette.accent.withValues(alpha: 0),
+                ],
               ),
             ),
-            ...widget.slivers,
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: MediaQuery.paddingOf(context).bottom + 16,
+            child: const SizedBox.expand(),
+          ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: const Alignment(1.1, -1.05),
+                radius: 0.9,
+                colors: [
+                  palette.streak.fill.withValues(alpha: dark ? 0.14 : 0.10),
+                  palette.streak.fill.withValues(alpha: 0),
+                ],
               ),
             ),
-          ],
-        ),
+            child: const SizedBox.expand(),
+          ),
+        ],
       ),
     );
   }
@@ -141,6 +194,7 @@ class _ScrollEdge extends StatelessWidget {
     if (palette.highContrast || MediaQuery.highContrastOf(context)) {
       return DecoratedBox(
         decoration: BoxDecoration(color: palette.surface, border: border),
+        child: const SizedBox.expand(),
       );
     }
     return ClipRect(
@@ -151,6 +205,7 @@ class _ScrollEdge extends StatelessWidget {
             color: palette.groupedBackground.withValues(alpha: 0.78),
             border: border,
           ),
+          child: const SizedBox.expand(),
         ),
       ),
     );

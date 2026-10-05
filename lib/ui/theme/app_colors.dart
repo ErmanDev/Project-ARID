@@ -18,27 +18,27 @@ class AppColors {
   static const Color primaryDarkMode = Color(0xFF72B6CB);
 
   // Light appearance.
-  static const Color groupedBackground = Color(0xFFF2F4F5);
+  static const Color groupedBackground = Color(0xFFF0F3F7);
   static const Color surface = Color(0xFFFFFFFF);
-  static const Color elevated = Color(0xFFF7F9FA);
-  static const Color fill = Color(0xFFE9EDEF);
+  static const Color elevated = Color(0xFFF6F8FB);
+  static const Color fill = Color(0xFFE6EBF1);
   static const Color ink = Color(0xFF1B2529);
   static const Color secondaryInk = Color(0xFF586569);
   static const Color tertiaryInk = Color(0xFF8A969A);
-  static const Color separator = Color(0xFFDCE2E5);
+  static const Color separator = Color(0xFFDAE1E8);
   static const Color accentTint = Color(0xFFE2EEF2);
   static const Color accentInk = Color(0xFF1F5566);
 
-  // Dark appearance: dimmer base, brighter elevated surfaces.
-  static const Color darkGroupedBackground = Color(0xFF0B1114);
-  static const Color darkSurface = Color(0xFF162024);
-  static const Color darkElevated = Color(0xFF1D292E);
-  static const Color darkFill = Color(0xFF26343A);
-  static const Color darkInk = Color(0xFFEDF3F5);
-  static const Color darkSecondaryInk = Color(0xFFA1AFB4);
-  static const Color darkTertiaryInk = Color(0xFF6F7F85);
-  static const Color darkSeparator = Color(0xFF2A373C);
-  static const Color darkAccentTint = Color(0xFF1C3740);
+  // Dark appearance: a deep navy base, brighter elevated surfaces.
+  static const Color darkGroupedBackground = Color(0xFF10151F);
+  static const Color darkSurface = Color(0xFF1A2130);
+  static const Color darkElevated = Color(0xFF222B3C);
+  static const Color darkFill = Color(0xFF2A3447);
+  static const Color darkInk = Color(0xFFEEF2F8);
+  static const Color darkSecondaryInk = Color(0xFFA7B1C3);
+  static const Color darkTertiaryInk = Color(0xFF737E93);
+  static const Color darkSeparator = Color(0xFF2D3749);
+  static const Color darkAccentTint = Color(0xFF1B3442);
   static const Color darkAccentInk = Color(0xFFBFE6F2);
 
   // Risk signal colors. Always paired with a glyph shape and a text label.
@@ -46,8 +46,8 @@ class AppColors {
   static const Color riskYellow = Color(0xFFA26F12);
   static const Color riskGreen = Color(0xFF3F8052);
   static const Color darkRiskRed = Color(0xFFF07C80);
-  static const Color darkRiskYellow = Color(0xFFE6B558);
-  static const Color darkRiskGreen = Color(0xFF7FC592);
+  static const Color darkRiskYellow = Color(0xFFF2C14E);
+  static const Color darkRiskGreen = Color(0xFF7FD6A8);
 
   // Supporting hues for settings-style icon tiles.
   static const Color secondary = Color(0xFF3F8052);
@@ -103,6 +103,10 @@ class AridPalette extends ThemeExtension<AridPalette> {
     required this.high,
     required this.moderate,
     required this.low,
+    required this.points,
+    required this.streak,
+    required this.sync,
+    required this.cardEdge,
     required this.glassFill,
     required this.glassEdge,
     required this.highContrast,
@@ -123,6 +127,14 @@ class AridPalette extends ThemeExtension<AridPalette> {
   final RiskTone high;
   final RiskTone moderate;
   final RiskTone low;
+
+  /// Supporting hues for Home's activity tiles: tinted tile, colored icon.
+  final RiskTone points;
+  final RiskTone streak;
+  final RiskTone sync;
+
+  /// Faint outline that lifts cards off the grouped background.
+  final Color cardEdge;
   final Color glassFill;
   final Color glassEdge;
   final bool highContrast;
@@ -160,37 +172,71 @@ class AridPalette extends ThemeExtension<AridPalette> {
       high: dark
           ? const RiskTone(
               fill: AppColors.darkRiskRed,
-              tint: Color(0xFF3A1F22),
-              ink: Color(0xFFFFB9BC),
+              tint: Color(0xFF3B1E29),
+              ink: Color(0xFFFFB6C0),
             )
           : const RiskTone(
               fill: AppColors.riskRed,
-              tint: Color(0xFFFBEAEA),
+              tint: Color(0xFFFCE5E7),
               ink: Color(0xFF8E2F36),
             ),
       moderate: dark
           ? const RiskTone(
               fill: AppColors.darkRiskYellow,
-              tint: Color(0xFF382C16),
-              ink: Color(0xFFF2D08C),
+              tint: Color(0xFF382D18),
+              ink: Color(0xFFF6D483),
             )
           : const RiskTone(
               fill: AppColors.riskYellow,
-              tint: Color(0xFFFAF0DC),
+              tint: Color(0xFFFBEED2),
               ink: Color(0xFF7A5208),
             ),
       low: dark
           ? const RiskTone(
               fill: AppColors.darkRiskGreen,
-              tint: Color(0xFF1B3322),
-              ink: Color(0xFFB5E3C1),
+              tint: Color(0xFF15322A),
+              ink: Color(0xFFA9E9C6),
             )
           : const RiskTone(
               fill: AppColors.riskGreen,
-              tint: Color(0xFFE6F2E8),
+              tint: Color(0xFFE0F2E6),
               ink: Color(0xFF2E6140),
             ),
-      glassFill: dark ? const Color(0xB3182226) : const Color(0xC7FFFFFF),
+      points: dark
+          ? const RiskTone(
+              fill: Color(0xFFF2B544),
+              tint: Color(0xFF3A2D16),
+              ink: Color(0xFFF7D58F),
+            )
+          : const RiskTone(
+              fill: AppColors.amber,
+              tint: Color(0xFFFBEED6),
+              ink: Color(0xFF7A4E0C),
+            ),
+      streak: dark
+          ? const RiskTone(
+              fill: Color(0xFF9AA5FF),
+              tint: Color(0xFF262C55),
+              ink: Color(0xFFCDD2FF),
+            )
+          : const RiskTone(
+              fill: AppColors.indigo,
+              tint: Color(0xFFE7E9FB),
+              ink: Color(0xFF3B4596),
+            ),
+      sync: dark
+          ? const RiskTone(
+              fill: Color(0xFF63CBC3),
+              tint: Color(0xFF163538),
+              ink: Color(0xFFA8E9E3),
+            )
+          : const RiskTone(
+              fill: Color(0xFF2C7F86),
+              tint: Color(0xFFDDF1F2),
+              ink: Color(0xFF1D5A60),
+            ),
+      cardEdge: dark ? const Color(0x14FFFFFF) : const Color(0x0F0B1F33),
+      glassFill: dark ? const Color(0xB31A2130) : const Color(0xC7FFFFFF),
       glassEdge: dark ? const Color(0x33FFFFFF) : const Color(0x14000000),
       highContrast: highContrast,
     );

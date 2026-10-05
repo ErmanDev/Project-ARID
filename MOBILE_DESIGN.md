@@ -26,12 +26,12 @@ All colors live in `AridPalette` ([lib/ui/theme/app_colors.dart](lib/ui/theme/ap
 
 | Role | Light | Dark | Contrast |
 | --- | --- | --- | --- |
-| Grouped background | `#F2F4F5` | `#0B1114` | — |
-| Surface | `#FFFFFF` | `#162024` | — |
-| Ink | `#1B2529` | `#EDF3F5` | 15.6 / 14.8 on surface |
-| Secondary ink | `#586569` | `#A1AFB4` | 5.5 / 8.4 on grouped background |
+| Grouped background | `#F0F3F7` | `#10151F` | — |
+| Surface | `#FFFFFF` | `#1A2130` | — |
+| Ink | `#1B2529` | `#EEF2F8` | 15.6 / 14.8 on surface |
+| Secondary ink | `#586569` | `#A7B1C3` | 5.5 / 8.4 on grouped background |
 | Accent (primary actions, selection) | `#2C6B80` | `#72B6CB` | Label on fill: 6.0 / 7.4 |
-| Risk: high / moderate / non-breeding | `#B8434A` `#A26F12` `#3F8052` | `#F07C80` `#E6B558` `#7FC592` | Glyphs ≥4.4 / ≥6.2 on surface; badge text ≥6.1 / ≥9.2 on its tint |
+| Risk: high / moderate / non-breeding | `#B8434A` `#A26F12` `#3F8052` | `#F07C80` `#F2C14E` `#7FD6A8` | Glyphs ≥4.4 / ≥6.2 on surface; badge text ≥6.1 / ≥9.2 on its tint |
 
 - **Type.** Uses the platform font for body text and controls, with the iOS scale: body 17, subheadline 15, footnote 13, caption 12. Montserrat is used only for large titles (34 bold). Large titles scale to 150%, tab labels to 130%, and body text without a cap.
 - **Shape.** Cards and grouped lists use a 22 radius, buttons 14, sheets 28, and the tab bar is a 32-radius capsule. Buttons are at least 52 tall, and all controls are at least 48 × 48.
@@ -79,3 +79,14 @@ Compact (phone)                    Regular (≥ 840)
   - delete confirmation, and no delete option for synced reports
   - contrast of text, accent and risk colors
 - Home, Map, Capture, History and Profile were checked on the Android 16 emulator: `output/redesign-*.png`. iOS and physical devices were not tested.
+
+## Color pass (2026-10-05)
+
+Home now uses more color, without taking it further than the proposed mockup:
+
+- The dark appearance moved from a teal-black to a deep navy (`#10151F` base, `#1A2130` cards). Every card also gets a faint `cardEdge` outline.
+- **Reported sites:** each risk level is a tinted pill (risk tint, a 35% risk-colored outline, glyph, label and a count chip).
+- **Your activity:** three stat cards (Points, Streak, Pending) with tinted icon tiles from the new `points`, `streak` and `sync` tones in `AridPalette`. They stack vertically above 130% text or below 300 px.
+- **Recent reports:** separate cards with the risk badge next to the title, a relative time ("2 hours ago") and the sync status. Without a photo, the placeholder uses the risk tint.
+- The report prompt has a soft accent wash and a solid accent icon tile.
+- The mockup's toolbar theme toggle and "Simulate New Report" were left out on purpose. Appearance stays in Profile (see the High finding above), and simulation is a demo-only control.
