@@ -113,46 +113,80 @@ export function useReports(enabled: boolean) {
   return { reports, updatedAt, error, loading }
 }
 
+function asTimestamp(value: unknown): string | null {
+  if (typeof value === 'string') return value
+  if (value && typeof value === 'object' && 'toDate' in value) {
+    const date = (value as { toDate: () => Date }).toDate()
+    return Number.isNaN(date.getTime()) ? null : date.toISOString()
+  }
+  return null
+}
+
+export function parseUserProfile(id: string, data: DocumentData): UserProfile {
+  return {
+    id,
+    username: asString(data.username),
+    displayName: asString(data.displayName, 'Field worker'),
+    role: data.role === 'admin' ? 'admin' : 'field',
+    verified: data.verified === true,
+    createdAt: asTimestamp(data.createdAt),
+    verifiedAt: asTimestamp(data.verifiedAt),
+    verifiedBy: typeof data.verifiedBy === 'string' ? data.verifiedBy : null,
+    totalPoints: asNumber(data.totalPoints),
+    reportCount: asNumber(data.reportCount),
+    // The mobile app writes this on every upsert, but documents synced by
+    // older builds will not have it. Absent means "unknown", which is not the
+    // same as "none verified".
+    verifiedPoints:
+      typeof data.verifiedPoints === 'number' && Number.isFinite(data.verifiedPoints)
+        ? data.verifiedPoints
+        : null,
+  }
+}
+
 export function useUsers(enabled: boolean) {
   const [users, setUsers] = useState<UserProfile[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!enabled) return
     if (useMockData) {
       setUsers(MOCK_USERS)
+      setLoading(false)
       return
     }
     const unsub = onSnapshot(
       collection(getDb(), 'users'),
       (snap) => {
-        setUsers(
-          snap.docs.map((item) => {
-            const data = item.data()
-            return {
-              id: item.id,
-              displayName: asString(data.displayName, 'Field worker'),
-              totalPoints: asNumber(data.totalPoints),
-              reportCount: asNumber(data.reportCount),
-              // The mobile app writes this on every upsert, but documents
-              // synced by older builds will not have it. Absent means
-              // "unknown", which is not the same as "none verified".
-              verifiedPoints:
-                typeof data.verifiedPoints === 'number' &&
-                Number.isFinite(data.verifiedPoints)
-                  ? data.verifiedPoints
-                  : null,
-            }
-          }),
-        )
+        setUsers(snap.docs.map((item) => parseUserProfile(item.id, item.data())))
+        setError(null)
+        setLoading(false)
       },
-      () => {
-        // Users are optional context for the leaderboard; keep the map usable.
+      (err) => {
+        setError(readErrorMessage(err))
+        setLoading(false)
       },
     )
     return unsub
   }, [enabled])
 
-  return users
+  return { users, loading, error }
+}
+
+/** Verifies an account so it can sign in, or revokes that. Admins only. */
+export async function setAccountVerified(
+  userId: string,
+  verified: boolean,
+  adminUid: string,
+): Promise<void> {
+  if (useMockData) return
+  await updateDoc(doc(getDb(), 'users', userId), {
+    verified,
+    verifiedAt: verified ? serverTimestamp() : null,
+    verifiedBy: verified ? adminUid : null,
+    updatedAt: serverTimestamp(),
+  })
 }
 
 export async function setReviewStatus(

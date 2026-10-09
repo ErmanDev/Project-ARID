@@ -74,10 +74,10 @@ class SyncService {
         return const SyncResult(message: 'No local profile');
       }
 
-      final firebaseUid = await _backend.ensureAnonymousUser(profile);
-      if (profile.firebaseUid != firebaseUid) {
-        profile.firebaseUid = firebaseUid;
-        await _users.save(profile);
+      final firebaseUid = _backend.signedInUid();
+      // Never upload under an account the local data doesn't belong to.
+      if (firebaseUid == null || profile.firebaseUid != firebaseUid) {
+        return const SyncResult(message: 'Sign in to sync your reports.');
       }
 
       final maxRetries = await _config.getInt(

@@ -23,9 +23,19 @@ export type Report = {
   reviewedBy: string | null
 }
 
+export type UserRole = 'admin' | 'field'
+
 export type UserProfile = {
   id: string
+  username: string
   displayName: string
+  /** `admin` signs in to this dashboard; `field` reports from the mobile app. */
+  role: UserRole
+  /** Unverified accounts cannot sign in anywhere. */
+  verified: boolean
+  createdAt: string | null
+  verifiedAt: string | null
+  verifiedBy: string | null
   totalPoints: number
   reportCount: number
   /**

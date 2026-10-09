@@ -73,7 +73,13 @@ export function MonitorPage() {
   const online = useOnline()
   const authorized = Boolean(auth.user && auth.isStaff)
   const { reports, updatedAt, error, loading } = useReports(authorized)
-  const users = useUsers(authorized)
+  // Admins are not reporters, so only field accounts appear on the map
+  // context and the leaderboard.
+  const { users: accounts } = useUsers(authorized)
+  const users = useMemo(
+    () => accounts.filter((account) => account.role === 'field'),
+    [accounts],
+  )
   const [filters, setFilters] = useState<Filters>(INITIAL)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [, setTick] = useState(0)

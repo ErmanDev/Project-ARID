@@ -1,12 +1,27 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Usernames sign in through Firebase Auth as <username>@arid.local.
+    function usernameEmail(username) {
+      return username + '@arid.local';
+    }
+
     function signedIn() {
       return request.auth != null;
     }
 
-    function isStaff() {
-      return signedIn() && exists(/databases/$(database)/documents/staff/$(request.auth.uid));
+    function myProfilePath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function isVerified() {
+      return signedIn()
+        && exists(myProfilePath())
+        && get(myProfilePath()).data.verified == true;
+    }
+
+    function isAdmin() {
+      return isVerified() && get(myProfilePath()).data.role == 'admin';
     }
 
     function onlyReviewFields() {
@@ -15,23 +30,49 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if isStaff() || (signedIn() && request.auth.uid == userId);
-      allow write: if signedIn() && request.auth.uid == userId;
-    }
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == userId);
 
-    match /reports/{reportId} {
-      allow read: if isStaff() || (signedIn() && resource.data.userId == request.auth.uid);
+      // Registration. Mobile sign-ups are field reporters and verified at once;
+      // web sign-ups are admins and stay unverified until another admin
+      // verifies them. Nobody can register as a verified admin.
       allow create: if signedIn()
-        && request.resource.data.userId == request.auth.uid
-        && request.resource.data.id == reportId;
-      allow update: if (signedIn() && resource.data.userId == request.auth.uid)
-        || (isStaff() && onlyReviewFields());
+        && request.auth.uid == userId
+        && request.resource.data.username is string
+        && request.auth.token.email == usernameEmail(request.resource.data.username)
+        && (
+          (request.resource.data.role == 'field' && request.resource.data.verified == true)
+          || (request.resource.data.role == 'admin' && request.resource.data.verified == false)
+        );
+
+      // Owners keep their own profile and points up to date, but cannot change
+      // who they are or whether they are verified. Verified admins can verify
+      // or revoke anyone except themselves.
+      allow update: if (
+          signedIn()
+          && request.auth.uid == userId
+          && !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['username', 'role', 'verified', 'verifiedAt', 'verifiedBy', 'createdAt'])
+        ) || (
+          isAdmin()
+          && request.auth.uid != userId
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['verified', 'verifiedAt', 'verifiedBy', 'updatedAt'])
+        );
+
       allow delete: if false;
     }
 
-    match /staff/{uid} {
-      allow read: if signedIn() && (request.auth.uid == uid || isStaff());
-      allow write: if false;
+    match /reports/{reportId} {
+      allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isVerified()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.id == reportId;
+      allow update: if (
+          isVerified()
+          && resource.data.userId == request.auth.uid
+          && request.resource.data.userId == request.auth.uid
+        ) || (isAdmin() && onlyReviewFields());
+      allow delete: if false;
     }
   }
 }

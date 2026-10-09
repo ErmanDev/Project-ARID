@@ -8,36 +8,27 @@
 
 const MESSAGES: Record<string, string> = {
   'auth/invalid-credential':
-    'That email and password do not match an account. Check both and try again.',
+    'That username and password do not match an account. Check both and try again.',
   'auth/wrong-password':
-    'That password is incorrect. Try again, or ask an administrator to reset it.',
+    'That password is incorrect. Try again, or ask an administrator for help.',
   'auth/user-not-found':
-    'No staff account uses that email. Check the address, or ask an administrator to create one.',
-  'auth/invalid-email': 'That does not look like a valid email address.',
+    'No account uses that username. Check it, or register a new account.',
+  'auth/invalid-email': 'That username is not valid.',
+  'auth/email-already-in-use': 'That username is already taken. Choose another one.',
+  'auth/weak-password': 'Use a password with at least 6 characters.',
   'auth/user-disabled':
     'This account has been disabled. Contact an administrator to restore access.',
   'auth/too-many-requests':
     'Too many sign-in attempts. Wait a few minutes before trying again.',
   'auth/network-request-failed':
     'Could not reach the server. Check your internet connection and try again.',
-  'auth/popup-blocked':
-    'Your browser blocked the Google sign-in window. Allow pop-ups for this site, then retry.',
-  'auth/account-exists-with-different-credential':
-    'This email is already registered with a different sign-in method. Try email and password.',
   'auth/operation-not-allowed':
-    'This sign-in method is not enabled for the project. Ask an administrator to enable it in Firebase Auth.',
+    'Username sign-in is not enabled for the project. Enable Email/Password in Firebase Auth.',
   'auth/api-key-not-valid.-please-pass-a-valid-api-key.':
     'The dashboard has an invalid Firebase API key. Check VITE_FIREBASE_API_KEY in dashboard/.env.',
   'auth/invalid-api-key':
     'The dashboard has an invalid Firebase API key. Check VITE_FIREBASE_API_KEY in dashboard/.env.',
 }
-
-/** Cancelling a popup is a choice, not a failure. These produce no message. */
-const SILENT = new Set([
-  'auth/popup-closed-by-user',
-  'auth/cancelled-popup-request',
-  'auth/user-cancelled',
-])
 
 function codeOf(error: unknown): string | null {
   if (typeof error === 'object' && error !== null && 'code' in error) {
@@ -49,20 +40,17 @@ function codeOf(error: unknown): string | null {
   return /\(([^)]+)\)/.exec(message)?.[1] ?? null
 }
 
-/**
- * Returns display copy, or `null` when the error should be shown as nothing at
- * all (a deliberately dismissed popup).
- */
-export function authErrorMessage(error: unknown): string | null {
+/** Display copy for a failed sign-in or registration. */
+export function authErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.name === 'AccessError') return error.message
   const code = codeOf(error)
-  if (code && SILENT.has(code)) return null
   if (code && MESSAGES[code]) return MESSAGES[code]
   return 'Sign-in failed. Try again, or contact an administrator if it keeps happening.'
 }
 
 const WRITE_MESSAGES: Record<string, string> = {
   'permission-denied':
-    'Your account is not allowed to change review status. Ask an administrator to check the Firestore rules.',
+    'Your account is not allowed to make this change. Only verified admins can review reports and verify accounts.',
   unavailable:
     'Could not reach Firestore. The change was not saved — check your connection and try again.',
   'not-found': 'This report no longer exists in Firestore.',
@@ -78,7 +66,7 @@ export function writeErrorMessage(error: unknown): string {
 
 const READ_MESSAGES: Record<string, string> = {
   'permission-denied':
-    'Your account is not on the staff list yet. Ask an administrator to add a staff record for your UID, then use Check again on the access page.',
+    'Your account is not a verified admin, so it cannot read this data. Ask an existing admin to verify you in the Users tab.',
   unavailable:
     'Could not reach Firestore. Check your internet connection and try again.',
   unauthenticated: 'Your session expired. Sign in again to load live reports.',
