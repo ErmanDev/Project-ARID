@@ -267,7 +267,7 @@ class GroupedSection extends StatelessWidget {
                         header ?? '',
                         style: smallHeader
                             ? TextStyle(
-                                color: p.secondaryInk,
+                                color: p.accent,
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
                               )
@@ -447,11 +447,15 @@ class ReportThumbnail extends StatelessWidget {
     required this.report,
     this.size = 56,
     this.radius = 12,
+    this.tinted = false,
   });
 
   final Report report;
   final double size;
   final double radius;
+
+  /// Without a photo, fill the placeholder with the report's risk tint.
+  final bool tinted;
 
   @override
   Widget build(BuildContext context) {
@@ -471,10 +475,10 @@ class ReportThumbnail extends StatelessWidget {
           : Container(
               width: size,
               height: size,
-              color: p.fill,
+              color: tinted ? p.risk(report.riskLevel).tint : p.fill,
               child: Icon(
                 Icons.image_outlined,
-                color: p.tertiaryInk,
+                color: tinted ? p.risk(report.riskLevel).fill : p.tertiaryInk,
                 size: size * 0.4,
               ),
             ),
@@ -589,40 +593,54 @@ class ReportRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ReportThumbnail(report: report),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    reportTitle(report),
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(meta, style: Theme.of(context).textTheme.bodySmall),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 6,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      RiskBadge(level: report.riskLevel, compact: true),
-                      SyncStatusChip(status: report.syncStatus),
-                    ],
-                  ),
-                ],
+    final p = context.arid;
+    // Each row washes in its risk tint from the leading edge, so a scan down
+    // the list reads the mix of risk before any badge is read.
+    return Ink(
+      decoration: p.highContrast
+          ? null
+          : BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.centerLeft,
+                end: const Alignment(0.6, 0),
+                colors: [p.risk(report.riskLevel).tint, p.surface],
               ),
             ),
-            if (trailing != null) trailing! else const SizedBox(width: 8),
-          ],
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ReportThumbnail(report: report, tinted: true),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      reportTitle(report),
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(meta, style: Theme.of(context).textTheme.bodySmall),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        RiskBadge(level: report.riskLevel, compact: true),
+                        SyncStatusChip(status: report.syncStatus),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              if (trailing != null) trailing! else const SizedBox(width: 8),
+            ],
+          ),
         ),
       ),
     );

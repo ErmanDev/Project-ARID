@@ -46,6 +46,7 @@ flutter:
     - assets/models/
     - assets/branding/
     - assets/mock/
+    - assets/mock/images/
   fonts:
     - family: Montserrat
       fonts:
