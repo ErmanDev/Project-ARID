@@ -18,10 +18,8 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  final _name = TextEditingController();
   final _cloudName = TextEditingController();
   final _uploadPreset = TextEditingController();
-  bool _nameReady = false;
   bool _syncing = false;
   bool _signingOut = false;
 
@@ -44,7 +42,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   void dispose() {
-    _name.dispose();
     _cloudName.dispose();
     _uploadPreset.dispose();
     super.dispose();
@@ -54,21 +51,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  Future<void> _saveName() async {
-    final profile = ref.read(profileProvider).valueOrNull;
-    if (profile == null) return;
-    final name = _name.text.trim();
-    if (name.isEmpty) {
-      _name.text = profile.displayName;
-      return;
-    }
-    profile.displayName = name;
-    await ref.read(userRepositoryProvider).save(profile);
-    if (!mounted) return;
-    FocusScope.of(context).unfocus();
-    _toast('Name saved.');
   }
 
   Future<void> _savePhotoSettings() async {
@@ -110,10 +92,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final online = ref.watch(isOnlineProvider);
     final themeMode = ref.watch(themeModeProvider);
     final account = ref.watch(authUserProvider).valueOrNull;
-    if (profile != null && !_nameReady) {
-      _name.text = profile.displayName;
-      _nameReady = true;
-    }
     final matrix = ref.watch(evaluationExportProvider).matrix(reports);
     final displayName = (profile?.displayName.trim().isNotEmpty ?? false)
         ? profile!.displayName.trim()
@@ -154,29 +132,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ],
                 ),
               ),
-            ),
-            GroupedSection(
-              header: 'Name',
-              footer: 'Stored on this device and attached to your reports.',
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-                  child: TextField(
-                    controller: _name,
-                    textCapitalization: TextCapitalization.words,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _saveName(),
-                    decoration: const InputDecoration(
-                      labelText: 'Display name',
-                    ),
-                  ),
-                ),
-                GroupedRow(
-                  title: 'Save name',
-                  accent: true,
-                  onTap: profile == null ? null : _saveName,
-                ),
-              ],
             ),
             GroupedSection(
               dividerIndent: 60,
@@ -341,7 +296,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ? null
                       : account.isAdmin
                       ? 'Admin'
-                      : 'Field reporter',
+                      : 'Staff',
                 ),
                 GroupedRow(
                   title: 'Sign out',

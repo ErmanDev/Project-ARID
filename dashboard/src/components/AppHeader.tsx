@@ -10,7 +10,7 @@ import { Button } from './ui'
 export function AppHeader({ status }: { status?: ReactNode }) {
   const auth = useAuth()
   const { users } = useUsers(Boolean(auth.user && auth.isStaff))
-  const pending = users.filter((user) => !user.verified).length
+  const pending = users.filter((user) => user.status === 'pending').length
   return (
     <header className="app-header">
       <a className="skip-link" href="#main-content">Skip to content</a>
@@ -22,7 +22,8 @@ export function AppHeader({ status }: { status?: ReactNode }) {
         <NavLink to="/" end><IconPin size={17} />Monitor</NavLink>
         <NavLink to="/analyze"><IconScan size={17} />Analyze</NavLink>
         <NavLink to="/users">
-          <IconUsers size={17} />Users
+          <IconUsers size={17} />
+          <span><span className="nav-label-extra">User </span>Verification</span>
           {pending > 0 ? (
             <span className="nav-count" aria-label={`${pending} waiting for verification`}>
               {pending}

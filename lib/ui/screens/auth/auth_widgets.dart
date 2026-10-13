@@ -74,6 +74,67 @@ class AuthHeading extends StatelessWidget {
   }
 }
 
+/// Groups related fields in a long form.
+class AuthSectionLabel extends StatelessWidget {
+  const AuthSectionLabel(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 10),
+      child: Semantics(
+        header: true,
+        child: Text(
+          text,
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(color: context.arid.secondaryInk),
+        ),
+      ),
+    );
+  }
+}
+
+/// A confirmation, such as a submitted registration.
+class AuthNotice extends StatelessWidget {
+  const AuthNotice({super.key, required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(
+              Icons.hourglass_top_rounded,
+              size: 20,
+              color: AppColors.primary,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class AuthError extends StatelessWidget {
   const AuthError({super.key, required this.message});
 

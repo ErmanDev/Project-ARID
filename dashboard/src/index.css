@@ -1041,6 +1041,11 @@ summary {
     flex: 1;
     padding: 8px 12px;
   }
+  /* Three tabs share one row on phones; "User Verification" shortens to
+     "Verification" so the labels still fit. */
+  .nav-label-extra {
+    display: none;
+  }
   .page-heading {
     padding-top: 12px;
   }

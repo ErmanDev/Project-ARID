@@ -31,7 +31,7 @@ class AppAccount {
   final String username;
   final String displayName;
 
-  /// `field` for reporters (every mobile sign-up) or `admin`.
+  /// `staff` for every mobile sign-up, or `admin`.
   final String role;
 
   bool get isAdmin => role == 'admin';
@@ -49,6 +49,7 @@ class AuthService {
 
   static const usernameDomain = 'arid.local';
   static const minPasswordLength = 6;
+  static const minimumAge = 15;
 
   final Isar _isar;
   final UserRepository _users;
@@ -70,6 +71,29 @@ class AuthService {
     return null;
   }
 
+  /// Whole years from [birthDate] to [today].
+  static int ageOn(DateTime birthDate, DateTime today) {
+    var age = today.year - birthDate.year;
+    if (today.month < birthDate.month ||
+        (today.month == birthDate.month && today.day < birthDate.day)) {
+      age -= 1;
+    }
+    return age;
+  }
+
+  /// "YYYY-MM-DD", the format stored in Firestore.
+  static String formatBirthDate(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
+
+  /// "Juan D. Dela Cruz".
+  static String displayNameFor(String first, String middle, String last) => [
+    first.trim(),
+    if (middle.trim().isNotEmpty) '${middle.trim()[0].toUpperCase()}.',
+    last.trim(),
+  ].join(' ');
+
   static DocumentReference<Map<String, dynamic>> _profileRef(String uid) =>
       FirebaseFirestore.instance.collection('users').doc(uid);
 
@@ -85,22 +109,30 @@ class AuthService {
         problem: 'This account has no A.R.I.D. profile. Register again.',
       );
     }
-    if (data['verified'] != true) {
-      return (
-        account: null,
-        problem: data['role'] == 'admin'
-            ? 'This admin account is waiting for verification by an '
-                  'existing admin.'
-            : 'This account has been deactivated. Contact your '
-                  'administrator.',
-      );
+    switch (data['status']) {
+      case 'verified':
+        break;
+      case 'rejected':
+        return (
+          account: null,
+          problem:
+              'Your registration was not approved. Contact your '
+              'administrator.',
+        );
+      default:
+        return (
+          account: null,
+          problem:
+              'Your account is waiting for approval. You can sign in once an '
+              'admin verifies it.',
+        );
     }
     return (
       account: AppAccount(
         uid: user.uid,
         username: (data['username'] as String?) ?? '',
         displayName: (data['displayName'] as String?) ?? '',
-        role: (data['role'] as String?) ?? 'field',
+        role: (data['role'] as String?) ?? 'staff',
       ),
       problem: null,
     );
@@ -123,61 +155,82 @@ class AuthService {
     await _adoptAccount(result);
   }
 
-  /// Creates a field reporter. Mobile sign-ups are verified at once.
+  /// Submits a staff registration. The account stays pending, and signed out,
+  /// until an admin verifies it on the dashboard.
   Future<void> register({
-    required String displayName,
+    required String firstName,
+    required String middleName,
+    required String lastName,
+    required DateTime birthDate,
     required String username,
     required String password,
   }) async {
     await _ensureFirebase();
     final normalized = normalizeUsername(username);
     final auth = FirebaseAuth.instance;
-    final UserCredential credential;
+
+    User user;
     try {
-      credential = await auth.createUserWithEmailAndPassword(
+      user = (await auth.createUserWithEmailAndPassword(
         email: emailFor(normalized),
         password: password,
-      );
+      )).user!;
     } on FirebaseAuthException catch (error) {
-      throw AuthFailure(_message(error));
+      if (error.code != 'email-already-in-use') {
+        throw AuthFailure(_message(error));
+      }
+      // An admin may have deleted this person's earlier request. The login
+      // still exists, so let its owner (who knows the password) register again.
+      user = await _reclaimDeletedRegistration(normalized, password);
     }
 
-    final user = credential.user!;
     try {
       await _profileRef(user.uid).set({
         'username': normalized,
-        'displayName': displayName,
-        'role': 'field',
-        'verified': true,
+        'firstName': firstName.trim(),
+        'middleName': middleName.trim(),
+        'lastName': lastName.trim(),
+        'displayName': displayNameFor(firstName, middleName, lastName),
+        'birthDate': formatBirthDate(birthDate),
+        'role': 'staff',
+        'status': 'pending',
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
         'totalPoints': 0,
         'verifiedPoints': 0,
         'reportCount': 0,
       });
-      // userChanges() fires on this, which makes the app re-check the new
-      // profile and open the main screens.
-      await user.updateDisplayName(displayName);
     } catch (_) {
-      // Without a profile the account is unusable; free the username.
-      try {
-        await user.delete();
-      } catch (_) {}
-      await auth.signOut();
       throw const AuthFailure(
-        'Couldn’t finish creating your account. Check your connection and '
-        'try again.',
+        'Couldn’t submit your registration. Check your connection and try '
+        'again.',
       );
+    } finally {
+      await auth.signOut();
     }
+  }
 
-    await _adoptAccount(
-      AppAccount(
-        uid: user.uid,
-        username: normalized,
-        displayName: displayName,
-        role: 'field',
-      ),
-    );
+  Future<User> _reclaimDeletedRegistration(
+    String username,
+    String password,
+  ) async {
+    const taken = AuthFailure('That username is already taken.');
+    final auth = FirebaseAuth.instance;
+    final User user;
+    try {
+      user = (await auth.signInWithEmailAndPassword(
+        email: emailFor(username),
+        password: password,
+      )).user!;
+    } on FirebaseAuthException {
+      throw taken;
+    }
+    final existing = await _profileRef(user.uid).get();
+    if (existing.exists) {
+      await auth.signOut();
+      throw taken;
+    }
+    return user;
   }
 
   /// Local reports stay on the phone until a different account signs in.

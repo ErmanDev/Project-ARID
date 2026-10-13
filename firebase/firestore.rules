@@ -17,7 +17,7 @@ service cloud.firestore {
     function isVerified() {
       return signedIn()
         && exists(myProfilePath())
-        && get(myProfilePath()).data.verified == true;
+        && get(myProfilePath()).data.status == 'verified';
     }
 
     function isAdmin() {
@@ -29,37 +29,62 @@ service cloud.firestore {
         .hasOnly(['reviewStatus', 'reviewedAt', 'reviewedBy', 'updatedAt']);
     }
 
+    // birthDate is "YYYY-MM-DD". The person must be at least 15 today; a
+    // 29 February birthday counts from 28 February in non-leap years. Dates
+    // are midnight UTC, so allow 14 hours for the time zone the person is in
+    // (the Philippines is UTC+8); the app checks the exact local date.
+    function atLeast15(birthDate) {
+      let year = int(birthDate[0:4]);
+      let month = int(birthDate[5:7]);
+      let day = int(birthDate[8:10]);
+      let safeDay = (month == 2 && day == 29) ? 28 : day;
+      return birthDate.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        && month >= 1 && month <= 12 && day >= 1 && day <= 31
+        && request.time + duration.value(14, 'h') >= timestamp.date(year + 15, month, safeDay);
+    }
+
     match /users/{userId} {
       allow read: if isAdmin() || (signedIn() && request.auth.uid == userId);
 
-      // Registration. Mobile sign-ups are field reporters and verified at once;
-      // web sign-ups are admins and stay unverified until another admin
-      // verifies them. Nobody can register as a verified admin.
+      // Mobile registration only: a pending staff account for the signed-in
+      // user. Admin accounts cannot be created from a client at all; they come
+      // from tool/create_admin.js.
       allow create: if signedIn()
         && request.auth.uid == userId
         && request.resource.data.username is string
         && request.auth.token.email == usernameEmail(request.resource.data.username)
-        && (
-          (request.resource.data.role == 'field' && request.resource.data.verified == true)
-          || (request.resource.data.role == 'admin' && request.resource.data.verified == false)
-        );
+        && request.resource.data.role == 'staff'
+        && request.resource.data.status == 'pending'
+        && request.resource.data.firstName is string
+        && request.resource.data.firstName.size() > 0
+        && request.resource.data.middleName is string
+        && request.resource.data.lastName is string
+        && request.resource.data.lastName.size() > 0
+        && request.resource.data.birthDate is string
+        && atLeast15(request.resource.data.birthDate);
 
-      // Owners keep their own profile and points up to date, but cannot change
-      // who they are or whether they are verified. Verified admins can verify
-      // or revoke anyone except themselves.
+      // Owners keep their points up to date but cannot change who they are or
+      // their approval. Verified admins verify, reject, or revoke anyone but
+      // themselves.
       allow update: if (
           signedIn()
           && request.auth.uid == userId
-          && !request.resource.data.diff(resource.data).affectedKeys()
-            .hasAny(['username', 'role', 'verified', 'verifiedAt', 'verifiedBy', 'createdAt'])
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+            'username', 'role', 'status', 'reviewedAt', 'reviewedBy', 'createdAt',
+            'firstName', 'middleName', 'lastName', 'birthDate', 'displayName'
+          ])
         ) || (
           isAdmin()
           && request.auth.uid != userId
+          && request.resource.data.status in ['pending', 'verified', 'rejected']
           && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['verified', 'verifiedAt', 'verifiedBy', 'updatedAt'])
+            .hasOnly(['status', 'reviewedAt', 'reviewedBy', 'updatedAt'])
         );
 
-      allow delete: if false;
+      // Admins can remove staff registrations, typically rejected ones.
+      allow delete: if isAdmin()
+        && request.auth.uid != userId
+        && resource.data.role == 'staff';
     }
 
     match /reports/{reportId} {

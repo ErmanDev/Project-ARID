@@ -1,15 +1,16 @@
 import { useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
+import { ageFrom } from '../accounts'
 import { useAuth } from '../auth'
 import { AppHeader } from '../components/AppHeader'
-import { IconCheck, IconSearchOff, IconUsers } from '../components/icons'
+import { IconCheck, IconClose, IconSearchOff, IconUsers } from '../components/icons'
 import { Alert, Button, EmptyState, Input, Segmented, Skeleton } from '../components/ui'
 import { useMockData } from '../config'
 import { writeErrorMessage } from '../errors'
-import { setAccountVerified, useUsers } from '../hooks'
-import type { UserProfile } from '../types'
+import { deleteAccount, setAccountStatus, useUsers } from '../hooks'
+import type { AccountStatus, UserProfile } from '../types'
 
-type Filter = 'all' | 'pending' | 'admin' | 'field'
+type Filter = AccountStatus | 'all'
 
 const DATE_FORMAT: Intl.DateTimeFormatOptions = {
   month: 'short',
@@ -22,117 +23,201 @@ function formatDate(iso: string | null): string {
   return new Date(iso).toLocaleDateString(undefined, DATE_FORMAT)
 }
 
+/** "YYYY-MM-DD" read as a calendar date, so no time zone shifts the day. */
+function formatBirthday(birthDate: string): string {
+  const [year, month, day] = birthDate.split('-').map(Number)
+  if (!year || !month || !day) return '—'
+  return new Date(year, month - 1, day).toLocaleDateString(undefined, DATE_FORMAT)
+}
+
+function fullName(account: UserProfile): string {
+  const parts = [account.firstName, account.middleName, account.lastName].filter(Boolean)
+  return parts.length > 0 ? parts.join(' ') : account.displayName
+}
+
+const STATUS_ORDER: Record<AccountStatus, number> = { pending: 0, verified: 1, rejected: 2 }
+
 /** Pending first, then newest registrations. */
 function compareAccounts(a: UserProfile, b: UserProfile): number {
-  if (a.verified !== b.verified) return a.verified ? 1 : -1
+  if (a.status !== b.status) return STATUS_ORDER[a.status] - STATUS_ORDER[b.status]
   return (b.createdAt ?? '').localeCompare(a.createdAt ?? '')
 }
 
-function Badge({ tone, children }: { tone: 'admin' | 'field' | 'ok' | 'pending'; children: string }) {
-  const styles = {
+type BadgeTone = 'admin' | 'staff' | AccountStatus
+
+function Badge({ tone, children }: { tone: BadgeTone; children: string }) {
+  const styles: Record<BadgeTone, string> = {
     admin: 'border-primary-200 bg-primary-50 text-primary-ink',
-    field: 'border-border bg-sunken text-ink-2',
-    ok: 'border-risk-green-edge bg-risk-green-tint text-risk-green-ink',
+    staff: 'border-border bg-sunken text-ink-2',
+    verified: 'border-risk-green-edge bg-risk-green-tint text-risk-green-ink',
     pending: 'border-risk-yellow-edge bg-risk-yellow-tint text-risk-yellow-ink',
-  }[tone]
+    rejected: 'border-risk-red-edge bg-risk-red-tint text-risk-red-ink',
+  }
   return (
-    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${styles}`}>
+    <span
+      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${styles[tone]}`}
+    >
       {children}
     </span>
   )
 }
 
+const STATUS_LABEL: Record<AccountStatus, string> = {
+  pending: 'Pending',
+  verified: 'Verified',
+  rejected: 'Rejected',
+}
+
+type Action = 'verify' | 'reject' | 'revoke' | 'delete'
+
 function AccountRow({
   account,
   isSelf,
-  verifierName,
+  reviewerName,
   busy,
-  onChange,
+  onAction,
 }: {
   account: UserProfile
   isSelf: boolean
-  verifierName: string | null
-  busy: boolean
-  onChange: (verified: boolean) => void
+  reviewerName: string | null
+  busy: Action | null
+  onAction: (action: Action) => void
 }) {
-  const initial = (account.displayName || account.username || '?').charAt(0).toUpperCase()
+  const name = fullName(account)
+  const age = account.birthDate ? ageFrom(account.birthDate) : null
+  const isStaff = account.role === 'staff'
+
   return (
-    <li className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3.5">
-      <div className="flex min-w-[14rem] flex-1 items-center gap-3">
-        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary-100 text-sm font-semibold text-primary-ink">
-          {initial}
+    <li className="flex flex-wrap items-center gap-x-5 gap-y-3 px-4 py-4">
+      <div className="flex min-w-[15rem] flex-1 items-center gap-3">
+        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary-100 text-sm font-semibold text-primary-ink">
+          {name.charAt(0).toUpperCase() || '?'}
         </span>
         <div className="min-w-0">
           <p className="truncate font-medium text-ink">
-            {account.displayName}
+            {name}
             {isSelf ? <span className="ml-2 text-xs font-normal text-muted">(you)</span> : null}
           </p>
           <p className="truncate text-sm text-muted">@{account.username || 'unknown'}</p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            <Badge tone={isStaff ? 'staff' : 'admin'}>{isStaff ? 'Staff' : 'Admin'}</Badge>
+            <Badge tone={account.status}>{STATUS_LABEL[account.status]}</Badge>
+          </div>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge tone={account.role === 'admin' ? 'admin' : 'field'}>
-          {account.role === 'admin' ? 'Admin' : 'Field reporter'}
-        </Badge>
-        <Badge tone={account.verified ? 'ok' : 'pending'}>
-          {account.verified ? 'Verified' : 'Pending'}
-        </Badge>
-      </div>
-
-      <dl className="flex gap-6 text-sm">
+      <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:flex sm:gap-6">
+        {isStaff ? (
+          <div>
+            <dt className="text-xs text-muted">Birthday</dt>
+            <dd className="text-ink-2" data-numeric>
+              {account.birthDate ? formatBirthday(account.birthDate) : '—'}
+              {age !== null ? <span className="text-muted"> · {age} yrs</span> : null}
+            </dd>
+          </div>
+        ) : null}
         <div>
           <dt className="text-xs text-muted">Registered</dt>
           <dd className="text-ink-2" data-numeric>{formatDate(account.createdAt)}</dd>
         </div>
-        <div>
-          <dt className="text-xs text-muted">Reports</dt>
-          <dd className="text-ink-2" data-numeric>{account.reportCount}</dd>
-        </div>
-        {account.verified && account.role === 'admin' ? (
+        {account.status !== 'pending' ? (
           <div>
-            <dt className="text-xs text-muted">Verified by</dt>
-            <dd className="max-w-[10rem] truncate text-ink-2">{verifierName ?? '—'}</dd>
+            <dt className="text-xs text-muted">
+              {account.status === 'verified' ? 'Verified by' : 'Rejected by'}
+            </dt>
+            <dd className="max-w-[11rem] truncate text-ink-2">
+              {reviewerName ?? '—'}
+              {account.reviewedAt ? (
+                <span className="text-muted"> · {formatDate(account.reviewedAt)}</span>
+              ) : null}
+            </dd>
+          </div>
+        ) : null}
+        {isStaff && account.status === 'verified' ? (
+          <div>
+            <dt className="text-xs text-muted">Reports</dt>
+            <dd className="text-ink-2" data-numeric>{account.reportCount}</dd>
           </div>
         ) : null}
       </dl>
 
-      <div className="ml-auto flex w-full justify-end sm:w-auto">
-        {isSelf ? null : account.verified ? (
-          <Button size="sm" variant="ghost" loading={busy} onClick={() => onChange(false)}>
-            Revoke
-          </Button>
-        ) : (
-          <Button
-            size="sm"
-            variant="primary"
-            icon={<IconCheck size={15} />}
-            loading={busy}
-            onClick={() => onChange(true)}
-          >
-            Verify
-          </Button>
-        )}
-      </div>
+      {isSelf ? null : (
+        <div className="ml-auto flex w-full flex-wrap justify-end gap-2 sm:w-auto">
+          {account.status !== 'verified' ? (
+            <Button
+              size="sm"
+              variant="primary"
+              icon={<IconCheck size={15} />}
+              loading={busy === 'verify'}
+              disabled={busy !== null}
+              onClick={() => onAction('verify')}
+            >
+              Verify
+            </Button>
+          ) : null}
+          {account.status === 'pending' ? (
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={<IconClose size={15} />}
+              loading={busy === 'reject'}
+              disabled={busy !== null}
+              onClick={() => onAction('reject')}
+            >
+              Reject
+            </Button>
+          ) : null}
+          {account.status === 'verified' ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              loading={busy === 'revoke'}
+              disabled={busy !== null}
+              onClick={() => onAction('revoke')}
+            >
+              Revoke
+            </Button>
+          ) : null}
+          {account.status === 'rejected' && isStaff ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-risk-red-ink"
+              loading={busy === 'delete'}
+              disabled={busy !== null}
+              onClick={() => onAction('delete')}
+            >
+              Delete
+            </Button>
+          ) : null}
+        </div>
+      )}
     </li>
   )
+}
+
+const CONFIRM: Partial<Record<Action, (name: string) => string>> = {
+  reject: (name) => `Reject ${name}? They will not be able to sign in. You can still verify or delete the request later.`,
+  revoke: (name) => `Revoke access for ${name}? They will be marked Rejected and cannot sign in until verified again.`,
+  delete: (name) =>
+    `Delete ${name}'s registration? This removes their details from the list. It cannot be undone, but they can register again.`,
 }
 
 export function UsersPage() {
   const auth = useAuth()
   const authorized = Boolean(auth.user && auth.isStaff)
   const { users, loading, error } = useUsers(authorized)
-  const [filter, setFilter] = useState<Filter>('all')
+  const [filter, setFilter] = useState<Filter>('pending')
   const [query, setQuery] = useState('')
-  const [busyId, setBusyId] = useState<string | null>(null)
+  const [busy, setBusy] = useState<{ id: string; action: Action } | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
   const counts = useMemo(
     () => ({
       all: users.length,
-      pending: users.filter((user) => !user.verified).length,
-      admin: users.filter((user) => user.role === 'admin').length,
-      field: users.filter((user) => user.role === 'field').length,
+      pending: users.filter((user) => user.status === 'pending').length,
+      verified: users.filter((user) => user.status === 'verified').length,
+      rejected: users.filter((user) => user.status === 'rejected').length,
     }),
     [users],
   )
@@ -140,24 +225,18 @@ export function UsersPage() {
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase()
     return users
-      .filter((user) =>
-        filter === 'all'
-          ? true
-          : filter === 'pending'
-            ? !user.verified
-            : user.role === filter,
-      )
+      .filter((user) => filter === 'all' || user.status === filter)
       .filter(
         (user) =>
           !needle ||
-          user.displayName.toLowerCase().includes(needle) ||
+          fullName(user).toLowerCase().includes(needle) ||
           user.username.toLowerCase().includes(needle),
       )
       .sort(compareAccounts)
   }, [users, filter, query])
 
   const namesById = useMemo(
-    () => new Map(users.map((user) => [user.id, user.displayName])),
+    () => new Map(users.map((user) => [user.id, fullName(user)])),
     [users],
   )
 
@@ -167,26 +246,38 @@ export function UsersPage() {
   if (!auth.user) return <Navigate to="/login" replace />
   if (!auth.isStaff) return <Navigate to="/denied" replace />
 
-  async function change(account: UserProfile, verified: boolean) {
+  async function run(account: UserProfile, action: Action) {
     if (!auth.user) return
-    if (
-      !verified &&
-      !window.confirm(
-        `Revoke access for ${account.displayName} (@${account.username})? They will not be able to sign in until an admin verifies them again.`,
-      )
-    ) {
-      return
-    }
+    const confirmText = CONFIRM[action]?.(`${fullName(account)} (@${account.username})`)
+    if (confirmText && !window.confirm(confirmText)) return
+
     setActionError(null)
-    setBusyId(account.id)
+    setBusy({ id: account.id, action })
     try {
-      await setAccountVerified(account.id, verified, auth.user.uid)
+      if (action === 'delete') {
+        await deleteAccount(account.id)
+      } else {
+        await setAccountStatus(
+          account.id,
+          action === 'verify' ? 'verified' : 'rejected',
+          auth.user.uid,
+        )
+      }
     } catch (err) {
       setActionError(writeErrorMessage(err))
     } finally {
-      setBusyId(null)
+      setBusy(null)
     }
   }
+
+  const emptyTitle =
+    users.length === 0
+      ? 'No accounts yet'
+      : query.trim()
+        ? 'No matching accounts'
+        : filter === 'pending'
+          ? 'No one is waiting'
+          : `No ${filter === 'all' ? '' : STATUS_LABEL[filter].toLowerCase()} accounts`
 
   return (
     <div className="flex min-h-full flex-col bg-bg">
@@ -198,22 +289,16 @@ export function UsersPage() {
       >
         <div className="analyze-heading">
           <div className="min-w-0">
-            <h1>Users</h1>
+            <h1>User Verification</h1>
             <p>
-              Everyone who registered. Field reporters are verified when they sign up on the
-              mobile app; new admins wait here until an admin verifies them.
+              Staff register on the mobile app and cannot sign in until an admin verifies them
+              here. Check each person's details before you verify.
             </p>
           </div>
         </div>
 
         {useMockData ? (
-          <Alert tone="info">Demo workspace: verify and revoke are disabled for sample users.</Alert>
-        ) : null}
-        {counts.pending > 0 ? (
-          <Alert tone="warning">
-            {counts.pending} {counts.pending === 1 ? 'account is' : 'accounts are'} waiting for
-            verification.
-          </Alert>
+          <Alert tone="info">Demo workspace: verification is disabled for sample users.</Alert>
         ) : null}
         {error ? <Alert tone="error">{error}</Alert> : null}
         {actionError ? (
@@ -228,10 +313,10 @@ export function UsersPage() {
             value={filter}
             onChange={setFilter}
             options={[
-              { value: 'all', label: 'All', meta: counts.all },
               { value: 'pending', label: 'Pending', meta: counts.pending },
-              { value: 'admin', label: 'Admins', meta: counts.admin },
-              { value: 'field', label: 'Field reporters', meta: counts.field },
+              { value: 'verified', label: 'Verified', meta: counts.verified },
+              { value: 'rejected', label: 'Rejected', meta: counts.rejected },
+              { value: 'all', label: 'All', meta: counts.all },
             ]}
           />
           <div className="min-w-[12rem] flex-1 sm:max-w-xs">
@@ -248,17 +333,17 @@ export function UsersPage() {
         <section className="overflow-hidden rounded-panel border border-border bg-surface shadow-sm">
           {loading ? (
             <div className="space-y-3 p-4" aria-hidden="true">
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-14 w-full" />
+              <Skeleton className="h-14 w-full" />
+              <Skeleton className="h-14 w-full" />
             </div>
           ) : visible.length === 0 ? (
             <EmptyState
-              icon={users.length === 0 ? <IconUsers size={18} /> : <IconSearchOff size={18} />}
-              title={users.length === 0 ? 'No accounts yet' : 'No matching accounts'}
+              icon={query.trim() ? <IconSearchOff size={18} /> : <IconUsers size={18} />}
+              title={emptyTitle}
             >
-              {users.length === 0
-                ? 'Accounts appear here as soon as someone registers.'
+              {users.length === 0 || filter === 'pending'
+                ? 'New staff registrations from the mobile app appear here.'
                 : 'Try another filter or search.'}
             </EmptyState>
           ) : (
@@ -268,11 +353,11 @@ export function UsersPage() {
                   key={account.id}
                   account={account}
                   isSelf={account.id === auth.user?.uid}
-                  verifierName={
-                    account.verifiedBy ? (namesById.get(account.verifiedBy) ?? null) : null
+                  reviewerName={
+                    account.reviewedBy ? (namesById.get(account.reviewedBy) ?? null) : null
                   }
-                  busy={busyId === account.id}
-                  onChange={(verified) => void change(account, verified)}
+                  busy={busy?.id === account.id ? busy.action : null}
+                  onAction={(action) => void run(account, action)}
                 />
               ))}
             </ul>

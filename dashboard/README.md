@@ -16,23 +16,26 @@ Open the printed local URL and sign in with an admin username and password.
 
 ## Accounts
 
-Everyone signs in with a **username and password**, on the web and on the
-mobile app. Behind the scenes each username is a Firebase Auth email/password
-account at `<username>@arid.local` (no mail is sent there). The account's role
-and status live in Firestore `users/{uid}`:
+Everyone signs in with a **username and password**. Behind the scenes each
+username is a Firebase Auth email/password account at `<username>@arid.local`
+(no mail is sent there). The account's details, role, and status live in
+Firestore `users/{uid}`.
 
-| Where you register | Role | Status | Can sign in to |
-|---|---|---|---|
-| Mobile app | `field` (field reporter) | Verified at once | Mobile app |
-| This dashboard | `admin` | Pending | Nothing until an admin clicks **Verify** in the **Users** tab |
+- **Admins** use this dashboard. There is no registration here: admins are
+  created only with `tool/create_admin.js`.
+- **Staff** register on the mobile app with their first, middle (optional),
+  and last name, birthday (15 or older), username, and password. They start
+  **Pending** and cannot sign in until an admin verifies them in the
+  **User Verification** tab.
 
-Only verified admins can use the dashboard. The **Users** tab lists every
-account, shows who is waiting, and lets an admin verify or revoke anyone but
-themselves. `firebase/firestore.rules` enforces all of this, so nobody can
-register as a verified admin or verify themselves through the API.
+In User Verification an admin can **Verify** or **Reject** a pending request,
+**Revoke** a verified account (it becomes Rejected), and **Delete** a rejected
+request. Someone whose request was deleted can register again with the same
+username and password. `firebase/firestore.rules` enforces all of this, so it
+cannot be bypassed through the API.
 
-If no verified admin is left, create one from the repo root after
-`firebase login`:
+Create another admin, or recover access if none is left, from the repo root
+after `firebase login`:
 
 ```bash
 node tool/create_admin.js <username> "<Display name>" [password]

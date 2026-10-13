@@ -4,6 +4,7 @@ import {
   onSnapshot,
   serverTimestamp,
   updateDoc,
+  deleteDoc,
   doc,
   type DocumentData,
 } from 'firebase/firestore'
@@ -11,7 +12,15 @@ import { getDb } from './firebase'
 import { useMockData } from './config'
 import { readErrorMessage } from './errors'
 import { getMockReports, MOCK_USERS, updateMockReview } from './mock/data'
-import type { Classification, Report, ReviewStatus, RiskLevel, SyncStatus, UserProfile } from './types'
+import type {
+  AccountStatus,
+  Classification,
+  Report,
+  ReviewStatus,
+  RiskLevel,
+  SyncStatus,
+  UserProfile,
+} from './types'
 
 function asString(value: unknown, fallback = ''): string {
   return typeof value === 'string' ? value : fallback
@@ -122,16 +131,29 @@ function asTimestamp(value: unknown): string | null {
   return null
 }
 
+const STATUSES: readonly AccountStatus[] = ['pending', 'verified', 'rejected']
+
 export function parseUserProfile(id: string, data: DocumentData): UserProfile {
+  const firstName = asString(data.firstName)
+  const middleName = asString(data.middleName)
+  const lastName = asString(data.lastName)
+  const built = [firstName, middleName ? `${middleName.charAt(0)}.` : '', lastName]
+    .filter(Boolean)
+    .join(' ')
+  const status = STATUSES.find((value) => value === data.status) ?? 'pending'
   return {
     id,
     username: asString(data.username),
-    displayName: asString(data.displayName, 'Field worker'),
-    role: data.role === 'admin' ? 'admin' : 'field',
-    verified: data.verified === true,
+    displayName: asString(data.displayName) || built || asString(data.username, 'Staff'),
+    firstName,
+    middleName,
+    lastName,
+    birthDate: asString(data.birthDate),
+    role: data.role === 'admin' ? 'admin' : 'staff',
+    status,
     createdAt: asTimestamp(data.createdAt),
-    verifiedAt: asTimestamp(data.verifiedAt),
-    verifiedBy: typeof data.verifiedBy === 'string' ? data.verifiedBy : null,
+    reviewedAt: asTimestamp(data.reviewedAt),
+    reviewedBy: typeof data.reviewedBy === 'string' ? data.reviewedBy : null,
     totalPoints: asNumber(data.totalPoints),
     reportCount: asNumber(data.reportCount),
     // The mobile app writes this on every upsert, but documents synced by
@@ -174,19 +196,28 @@ export function useUsers(enabled: boolean) {
   return { users, loading, error }
 }
 
-/** Verifies an account so it can sign in, or revokes that. Admins only. */
-export async function setAccountVerified(
+/** Verifies, rejects, or revokes (back to rejected) an account. Admins only. */
+export async function setAccountStatus(
   userId: string,
-  verified: boolean,
+  status: AccountStatus,
   adminUid: string,
 ): Promise<void> {
   if (useMockData) return
   await updateDoc(doc(getDb(), 'users', userId), {
-    verified,
-    verifiedAt: verified ? serverTimestamp() : null,
-    verifiedBy: verified ? adminUid : null,
+    status,
+    reviewedAt: serverTimestamp(),
+    reviewedBy: adminUid,
     updatedAt: serverTimestamp(),
   })
+}
+
+/**
+ * Removes a staff registration. The person can register again with the same
+ * username and password, which recreates their pending request.
+ */
+export async function deleteAccount(userId: string): Promise<void> {
+  if (useMockData) return
+  await deleteDoc(doc(getDb(), 'users', userId))
 }
 
 export async function setReviewStatus(

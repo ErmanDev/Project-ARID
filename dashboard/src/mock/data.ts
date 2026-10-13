@@ -34,16 +34,23 @@ function hoursAgo(hours: number): string {
 }
 
 // The shared mock file predates accounts, so every sample user is a verified
-// field reporter named after their id.
-export const MOCK_USERS: UserProfile[] = file.users.map((user) => ({
-  ...user,
-  username: user.id.replace(/^mock-user-/, ''),
-  role: 'field',
-  verified: true,
-  createdAt: null,
-  verifiedAt: null,
-  verifiedBy: null,
-}))
+// staff member named after their id.
+export const MOCK_USERS: UserProfile[] = file.users.map((user) => {
+  const [firstName = user.displayName, ...rest] = user.displayName.split(' ')
+  return {
+    ...user,
+    username: user.id.replace(/^mock-user-/, ''),
+    firstName,
+    middleName: '',
+    lastName: rest.join(' '),
+    birthDate: '1995-06-15',
+    role: 'staff',
+    status: 'verified',
+    createdAt: null,
+    reviewedAt: null,
+    reviewedBy: null,
+  }
+})
 
 function normalizeRiskLevel(level: string): Report['riskLevel'] {
   if (level === 'red' || level === 'yellow') return level

@@ -4,10 +4,10 @@
  * Usage (from the repo root, after `firebase login`):
  *   node tool/create_admin.js <username> "<Display name>" [password]
  *
- * Without a password, a random one is generated and printed once. Use this to
- * create the first admin, or to recover access if no verified admin is left.
- * Everyone else registers in the app or dashboard and is verified from the
- * dashboard's Users tab.
+ * Without a password, a random one is generated and printed once. This is the
+ * only way to create an admin: the dashboard has no registration. Staff
+ * register on the mobile app and are verified in the dashboard's User
+ * Verification tab.
  */
 const crypto = require('crypto');
 const fs = require('fs');
@@ -73,11 +73,15 @@ async function main() {
       fields: {
         username: { stringValue: username },
         displayName: { stringValue: displayName },
+        firstName: { stringValue: displayName },
+        middleName: { stringValue: '' },
+        lastName: { stringValue: '' },
+        birthDate: { stringValue: '' },
         role: { stringValue: 'admin' },
-        verified: { booleanValue: true },
+        status: { stringValue: 'verified' },
         createdAt: { timestampValue: now },
-        verifiedAt: { timestampValue: now },
-        verifiedBy: { stringValue: 'tool/create_admin.js' },
+        reviewedAt: { timestampValue: now },
+        reviewedBy: { stringValue: 'tool/create_admin.js' },
         updatedAt: { timestampValue: now },
         totalPoints: { integerValue: '0' },
         verifiedPoints: { integerValue: '0' },

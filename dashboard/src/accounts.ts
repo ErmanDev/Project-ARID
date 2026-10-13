@@ -11,17 +11,6 @@ export function normalizeUsername(value: string): string {
   return value.trim().toLowerCase()
 }
 
-/** Returns a problem with the username, or null when it is usable. */
-export function usernameProblem(value: string): string | null {
-  const username = normalizeUsername(value)
-  if (username.length < 3) return 'Use at least 3 characters.'
-  if (username.length > 30) return 'Use 30 characters or fewer.'
-  if (!/^[a-z0-9][a-z0-9._-]*$/.test(username)) {
-    return 'Use letters, numbers, dots, dashes, or underscores, starting with a letter or number.'
-  }
-  return null
-}
-
 export function usernameToEmail(value: string): string {
   return `${normalizeUsername(value)}@${USERNAME_DOMAIN}`
 }
@@ -37,13 +26,25 @@ export class AccessError extends Error {
 /** Why a signed-in profile cannot use the dashboard, or null when it can. */
 export function dashboardAccessProblem(profile: UserProfile | null): string | null {
   if (!profile) {
-    return 'This account has no A.R.I.D. profile. Register again or contact an administrator.'
+    return 'This account has no A.R.I.D. profile. Contact an administrator.'
   }
   if (profile.role !== 'admin') {
-    return 'This is a field reporter account. Field reporters sign in on the A.R.I.D. mobile app.'
+    return 'This is a staff account. Staff sign in on the A.R.I.D. mobile app.'
   }
-  if (!profile.verified) {
-    return 'Your admin account is waiting for verification. An existing admin has to verify it in the Users tab before you can sign in.'
+  if (profile.status !== 'verified') {
+    return 'This admin account is not active. Contact another administrator.'
   }
   return null
+}
+
+/** Whole years between a "YYYY-MM-DD" birthday and today, or null if invalid. */
+export function ageFrom(birthDate: string, today = new Date()): number | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(birthDate)
+  if (!match) return null
+  const [year, month, day] = match.slice(1).map(Number)
+  let age = today.getFullYear() - year
+  const beforeBirthday =
+    today.getMonth() + 1 < month || (today.getMonth() + 1 === month && today.getDate() < day)
+  if (beforeBirthday) age -= 1
+  return age
 }

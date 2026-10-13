@@ -23,6 +23,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   bool _attempted = false;
   bool _hidePassword = true;
   String? _error;
+  String? _notice;
 
   @override
   void dispose() {
@@ -39,6 +40,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _notice = null;
     });
     try {
       // authUserProvider switches the app to the main screens on success.
@@ -56,6 +58,19 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     }
   }
 
+  Future<void> _openRegister() async {
+    final submitted = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const RegisterScreen()),
+    );
+    if (submitted != true || !mounted) return;
+    setState(() {
+      _error = null;
+      _notice =
+          'Registration submitted. You can sign in once an admin verifies '
+          'your account.';
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return AuthScaffold(
@@ -65,8 +80,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         const AuthHeading(
           title: 'Sign in to A.R.I.D.',
           subtitle:
-              'Use your username and password. New here? Create a field '
-              'reporter account.',
+              'Use your username and password. New staff can create an '
+              'account.',
         ),
         const SizedBox(height: 28),
         Form(
@@ -80,6 +95,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (_notice != null) ...[
+                  AuthNotice(message: _notice!),
+                  const SizedBox(height: 16),
+                ],
                 if (_error != null) ...[
                   AuthError(message: _error!),
                   const SizedBox(height: 16),
@@ -129,9 +148,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         TextButton(
           onPressed: _busy
               ? null
-              : () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                ),
+              : _openRegister,
           child: const Text('Create an account'),
         ),
       ],

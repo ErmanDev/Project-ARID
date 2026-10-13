@@ -65,7 +65,6 @@ class FirebaseBackend {
   Future<void> upsertUser(UserProfile profile, String firebaseUid) async {
     await FirebaseFirestore.instance.collection('users').doc(firebaseUid).set({
       'localUserId': profile.id,
-      'displayName': profile.displayName,
       'totalPoints': profile.totalPoints,
       'verifiedPoints': profile.verifiedPoints,
       'reportCount': profile.reportCount,

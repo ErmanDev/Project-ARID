@@ -7,14 +7,12 @@ import {
   type ReactNode,
 } from 'react'
 import {
-  createUserWithEmailAndPassword,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
-  updateProfile,
   type User,
 } from 'firebase/auth'
-import { doc, getDoc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore'
+import { doc, getDoc, onSnapshot } from 'firebase/firestore'
 import { firebaseConfigured, getDb, getFirebaseAuth } from './firebase'
 import { mockIsStaff, useMockData } from './config'
 import { parseUserProfile } from './hooks'
@@ -22,7 +20,6 @@ import type { UserProfile } from './types'
 import {
   AccessError,
   dashboardAccessProblem,
-  normalizeUsername,
   usernameToEmail,
 } from './accounts'
 
@@ -35,8 +32,6 @@ type AuthValue = {
   configured: boolean
   error: string | null
   signIn: (username: string, password: string) => Promise<void>
-  /** Creates an unverified admin account and leaves the visitor signed out. */
-  register: (displayName: string, username: string, password: string) => Promise<void>
   signOut: () => Promise<void>
 }
 
@@ -46,11 +41,15 @@ const MOCK_PROFILE: UserProfile = {
   id: 'mock-admin',
   username: 'admin',
   displayName: 'Demo admin',
+  firstName: 'Demo',
+  middleName: '',
+  lastName: 'Admin',
+  birthDate: '',
   role: 'admin',
-  verified: true,
+  status: 'verified',
   createdAt: null,
-  verifiedAt: null,
-  verifiedBy: null,
+  reviewedAt: null,
+  reviewedBy: null,
   totalPoints: 0,
   reportCount: 0,
   verifiedPoints: 0,
@@ -65,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (useMockData) {
       setUser({ uid: MOCK_PROFILE.id } as User)
-      setProfile({ ...MOCK_PROFILE, verified: mockIsStaff })
+      setProfile({ ...MOCK_PROFILE, status: mockIsStaff ? 'verified' : 'rejected' })
       setLoading(false)
       return
     }
@@ -129,36 +128,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (problem) {
           await firebaseSignOut(auth)
           throw new AccessError(problem)
-        }
-      },
-      register: async (displayName, username, password) => {
-        setError(null)
-        const auth = getFirebaseAuth()
-        const normalized = normalizeUsername(username)
-        const credential = await createUserWithEmailAndPassword(
-          auth,
-          usernameToEmail(normalized),
-          password,
-        )
-        try {
-          await updateProfile(credential.user, { displayName })
-          await setDoc(doc(getDb(), 'users', credential.user.uid), {
-            username: normalized,
-            displayName,
-            role: 'admin',
-            verified: false,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-            totalPoints: 0,
-            verifiedPoints: 0,
-            reportCount: 0,
-          })
-        } catch (err) {
-          // Without a profile the account is unusable; free the username.
-          await credential.user.delete().catch(() => undefined)
-          throw err
-        } finally {
-          await firebaseSignOut(auth)
         }
       },
       signOut: async () => {
