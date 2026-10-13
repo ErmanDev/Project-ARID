@@ -5,6 +5,7 @@ import { DeniedPage } from './pages/Denied'
 import { LoginPage } from './pages/Login'
 import { MonitorPage } from './pages/Monitor'
 import { AnalyzePage } from './pages/Analyze'
+import { UsersPage } from './pages/Users'
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
             <Route path="/denied" element={<DeniedPage />} />
             <Route path="/" element={<MonitorPage />} />
             <Route path="/analyze" element={<AnalyzePage />} />
+            <Route path="/users" element={<UsersPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>

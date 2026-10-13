@@ -1,26 +1,40 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { authErrorMessage } from '../errors'
-import { IconGoogle } from '../components/icons'
-import { Alert, Button } from '../components/ui'
+import { Alert, Button, Field, Input } from '../components/ui'
 import { ThemeToggle } from '../components/ThemeToggle'
 
+/**
+ * Admin sign-in. There is no registration here: admin accounts are created
+ * with tool/create_admin.js, and staff register on the mobile app.
+ */
 export function LoginPage() {
   const auth = useAuth()
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [attempted, setAttempted] = useState(false)
 
   if (auth.user && auth.isStaff) return <Navigate to="/" replace />
-  if (auth.user && !auth.isStaff) return <Navigate to="/denied" replace />
 
-  async function signInWithGoogle() {
-    setBusy(true)
+  const errors = {
+    username: username.trim() ? undefined : 'Enter your username.',
+    password: password ? undefined : 'Enter your password.',
+  }
+  const shown = (error: string | undefined) => (attempted ? error : undefined)
+
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    setAttempted(true)
     setMessage(null)
+    if (errors.username || errors.password) return
+
+    setBusy(true)
     try {
-      await auth.signInGoogle()
+      await auth.signIn(username, password)
     } catch (err) {
-      // null means "the user cancelled" — nothing worth showing them.
       setMessage(authErrorMessage(err))
     } finally {
       setBusy(false)
@@ -35,12 +49,10 @@ export function LoginPage() {
         </div>
         <div className="rounded-panel border border-border bg-surface p-7 shadow-md">
           <img src="/arid-logo.png" alt="" className="size-12" />
-          <p className="eyebrow mt-6">A.R.I.D. staff workspace</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-ink">
-            Welcome back.
-          </h1>
+          <p className="eyebrow mt-6">A.R.I.D. admin workspace</p>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-ink">Welcome back.</h1>
           <p className="mt-1.5 text-base text-muted">
-            A clearer view of your community starts here. Sign in to monitor reports and inspect potential breeding sites.
+            Sign in to monitor reports, inspect potential breeding sites, and verify staff accounts.
           </p>
 
           {!auth.configured ? (
@@ -48,29 +60,47 @@ export function LoginPage() {
               This workspace is not connected yet. Ask your administrator to complete sign-in setup.
             </Alert>
           ) : (
-            <div className="mt-6 space-y-4">
+            <form className="mt-6 space-y-4" noValidate onSubmit={(event) => void submit(event)}>
               {message ? (
                 <Alert tone="error" live>
                   {message}
                 </Alert>
               ) : null}
 
-              <Button
-                variant="primary"
-                block
-                icon={<IconGoogle size={16} />}
-                loading={busy}
-                disabled={busy}
-                onClick={() => void signInWithGoogle()}
-              >
-                Continue with Google
+              <Field id="username" label="Username" error={shown(errors.username)}>
+                {(props) => (
+                  <Input
+                    {...props}
+                    autoComplete="username"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    value={username}
+                    onChange={(event) => setUsername(event.target.value)}
+                  />
+                )}
+              </Field>
+
+              <Field id="password" label="Password" error={shown(errors.password)}>
+                {(props) => (
+                  <Input
+                    {...props}
+                    type="password"
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                  />
+                )}
+              </Field>
+
+              <Button type="submit" variant="primary" block loading={busy} disabled={busy}>
+                Sign in
               </Button>
-            </div>
+            </form>
           )}
         </div>
 
         <p className="mt-4 px-1 auth-note text-center text-xs">
-          For authorized LGU and health-worker accounts. Need access? Contact your administrator.
+          For LGU and health-office admins. Staff register and sign in on the A.R.I.D. mobile app.
         </p>
       </main>
     </div>

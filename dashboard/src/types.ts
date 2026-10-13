@@ -23,9 +23,28 @@ export type Report = {
   reviewedBy: string | null
 }
 
+export type UserRole = 'admin' | 'staff'
+export type AccountStatus = 'pending' | 'verified' | 'rejected'
+
 export type UserProfile = {
   id: string
+  username: string
+  /** "First M. Last", built from the name fields. */
   displayName: string
+  firstName: string
+  /** Empty when the person has no middle name. */
+  middleName: string
+  lastName: string
+  /** "YYYY-MM-DD", or empty for admin accounts. */
+  birthDate: string
+  /** `admin` uses this dashboard; `staff` report from the mobile app. */
+  role: UserRole
+  /** Only verified accounts can sign in. */
+  status: AccountStatus
+  createdAt: string | null
+  reviewedAt: string | null
+  /** Admin uid that last verified or rejected the account. */
+  reviewedBy: string | null
   totalPoints: number
   reportCount: number
   /**

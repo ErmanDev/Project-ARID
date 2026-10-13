@@ -1,12 +1,27 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Usernames sign in through Firebase Auth as <username>@arid.local.
+    function usernameEmail(username) {
+      return username + '@arid.local';
+    }
+
     function signedIn() {
       return request.auth != null;
     }
 
-    function isStaff() {
-      return signedIn() && exists(/databases/$(database)/documents/staff/$(request.auth.uid));
+    function myProfilePath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function isVerified() {
+      return signedIn()
+        && exists(myProfilePath())
+        && get(myProfilePath()).data.status == 'verified';
+    }
+
+    function isAdmin() {
+      return isVerified() && get(myProfilePath()).data.role == 'admin';
     }
 
     function onlyReviewFields() {
@@ -14,24 +29,75 @@ service cloud.firestore {
         .hasOnly(['reviewStatus', 'reviewedAt', 'reviewedBy', 'updatedAt']);
     }
 
+    // birthDate is "YYYY-MM-DD". The person must be at least 15 today; a
+    // 29 February birthday counts from 28 February in non-leap years. Dates
+    // are midnight UTC, so allow 14 hours for the time zone the person is in
+    // (the Philippines is UTC+8); the app checks the exact local date.
+    function atLeast15(birthDate) {
+      let year = int(birthDate[0:4]);
+      let month = int(birthDate[5:7]);
+      let day = int(birthDate[8:10]);
+      let safeDay = (month == 2 && day == 29) ? 28 : day;
+      return birthDate.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        && month >= 1 && month <= 12 && day >= 1 && day <= 31
+        && request.time + duration.value(14, 'h') >= timestamp.date(year + 15, month, safeDay);
+    }
+
     match /users/{userId} {
-      allow read: if isStaff() || (signedIn() && request.auth.uid == userId);
-      allow write: if signedIn() && request.auth.uid == userId;
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == userId);
+
+      // Mobile registration only: a pending staff account for the signed-in
+      // user. Admin accounts cannot be created from a client at all; they come
+      // from tool/create_admin.js.
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.username is string
+        && request.auth.token.email == usernameEmail(request.resource.data.username)
+        && request.resource.data.role == 'staff'
+        && request.resource.data.status == 'pending'
+        && request.resource.data.firstName is string
+        && request.resource.data.firstName.size() > 0
+        && request.resource.data.middleName is string
+        && request.resource.data.lastName is string
+        && request.resource.data.lastName.size() > 0
+        && request.resource.data.birthDate is string
+        && atLeast15(request.resource.data.birthDate);
+
+      // Owners keep their points up to date but cannot change who they are or
+      // their approval. Verified admins verify, reject, or revoke anyone but
+      // themselves.
+      allow update: if (
+          signedIn()
+          && request.auth.uid == userId
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+            'username', 'role', 'status', 'reviewedAt', 'reviewedBy', 'createdAt',
+            'firstName', 'middleName', 'lastName', 'birthDate', 'displayName'
+          ])
+        ) || (
+          isAdmin()
+          && request.auth.uid != userId
+          && request.resource.data.status in ['pending', 'verified', 'rejected']
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'reviewedAt', 'reviewedBy', 'updatedAt'])
+        );
+
+      // Admins can remove staff registrations, typically rejected ones.
+      allow delete: if isAdmin()
+        && request.auth.uid != userId
+        && resource.data.role == 'staff';
     }
 
     match /reports/{reportId} {
-      allow read: if isStaff() || (signedIn() && resource.data.userId == request.auth.uid);
-      allow create: if signedIn()
+      allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isVerified()
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.id == reportId;
-      allow update: if (signedIn() && resource.data.userId == request.auth.uid)
-        || (isStaff() && onlyReviewFields());
+      allow update: if (
+          isVerified()
+          && resource.data.userId == request.auth.uid
+          && request.resource.data.userId == request.auth.uid
+        ) || (isAdmin() && onlyReviewFields());
       allow delete: if false;
-    }
-
-    match /staff/{uid} {
-      allow read: if signedIn() && (request.auth.uid == uid || isStaff());
-      allow write: if false;
     }
   }
 }

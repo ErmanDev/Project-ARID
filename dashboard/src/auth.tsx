@@ -8,47 +8,63 @@ import {
 } from 'react'
 import {
   onAuthStateChanged,
-  signInWithPopup,
+  signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   type User,
 } from 'firebase/auth'
-import { doc, getDoc } from 'firebase/firestore'
-import { firebaseConfigured, getDb, getFirebaseAuth, googleProvider } from './firebase'
+import { doc, getDoc, onSnapshot } from 'firebase/firestore'
+import { firebaseConfigured, getDb, getFirebaseAuth } from './firebase'
 import { mockIsStaff, useMockData } from './config'
+import { parseUserProfile } from './hooks'
+import type { UserProfile } from './types'
+import {
+  AccessError,
+  dashboardAccessProblem,
+  usernameToEmail,
+} from './accounts'
 
 type AuthValue = {
   user: User | null
+  profile: UserProfile | null
+  /** A verified admin: the only kind of account the dashboard serves. */
   isStaff: boolean
   loading: boolean
   configured: boolean
   error: string | null
-  signInGoogle: () => Promise<void>
+  signIn: (username: string, password: string) => Promise<void>
   signOut: () => Promise<void>
-  /**
-   * Re-runs the staff lookup for the current user and returns the result.
-   * Lets someone waiting on provisioning poll for it, instead of having to
-   * sign out and back in to pick up a `staff/{uid}` document that now exists.
-   */
-  recheckStaff: () => Promise<boolean>
 }
 
 const AuthContext = createContext<AuthValue | null>(null)
 
-async function resolveStaff(uid: string): Promise<boolean> {
-  const snap = await getDoc(doc(getDb(), 'staff', uid))
-  return snap.exists()
+const MOCK_PROFILE: UserProfile = {
+  id: 'mock-admin',
+  username: 'admin',
+  displayName: 'Demo admin',
+  firstName: 'Demo',
+  middleName: '',
+  lastName: 'Admin',
+  birthDate: '',
+  role: 'admin',
+  status: 'verified',
+  createdAt: null,
+  reviewedAt: null,
+  reviewedBy: null,
+  totalPoints: 0,
+  reportCount: 0,
+  verifiedPoints: 0,
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [isStaff, setIsStaff] = useState(false)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (useMockData) {
-      setUser({ uid: 'mock-staff', email: 'staff@arid.local' } as User)
-      setIsStaff(mockIsStaff)
+      setUser({ uid: MOCK_PROFILE.id } as User)
+      setProfile({ ...MOCK_PROFILE, status: mockIsStaff ? 'verified' : 'rejected' })
       setLoading(false)
       return
     }
@@ -56,62 +72,70 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false)
       return
     }
-    const unsub = onAuthStateChanged(getFirebaseAuth(), async (next) => {
+
+    let stopProfile: (() => void) | null = null
+    const stopAuth = onAuthStateChanged(getFirebaseAuth(), (next) => {
+      stopProfile?.()
+      stopProfile = null
       setError(null)
+      setUser(next)
       if (!next) {
-        setUser(null)
-        setIsStaff(false)
+        setProfile(null)
         setLoading(false)
         return
       }
-      try {
-        const staff = await resolveStaff(next.uid)
-        setUser(next)
-        setIsStaff(staff)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Could not verify staff access')
-        setUser(next)
-        setIsStaff(false)
-      } finally {
-        setLoading(false)
-      }
+      setLoading(true)
+      // Live, so a verification or a revoke applies without signing out.
+      stopProfile = onSnapshot(
+        doc(getDb(), 'users', next.uid),
+        (snap) => {
+          setProfile(snap.exists() ? parseUserProfile(snap.id, snap.data()) : null)
+          setLoading(false)
+        },
+        (err) => {
+          setError(err instanceof Error ? err.message : 'Could not load your account')
+          setProfile(null)
+          setLoading(false)
+        },
+      )
     })
-    return unsub
+    return () => {
+      stopProfile?.()
+      stopAuth()
+    }
   }, [])
 
   const value = useMemo<AuthValue>(
     () => ({
       user,
-      isStaff,
+      profile,
+      isStaff: Boolean(user && dashboardAccessProblem(profile) === null),
       loading,
       configured: firebaseConfigured,
       error,
-      signInGoogle: async () => {
+      signIn: async (username, password) => {
         setError(null)
-        await signInWithPopup(getFirebaseAuth(), googleProvider)
+        const auth = getFirebaseAuth()
+        const credential = await signInWithEmailAndPassword(
+          auth,
+          usernameToEmail(username),
+          password,
+        )
+        const snap = await getDoc(doc(getDb(), 'users', credential.user.uid))
+        const problem = dashboardAccessProblem(
+          snap.exists() ? parseUserProfile(snap.id, snap.data()) : null,
+        )
+        if (problem) {
+          await firebaseSignOut(auth)
+          throw new AccessError(problem)
+        }
       },
       signOut: async () => {
         if (useMockData) return
         if (firebaseConfigured) await firebaseSignOut(getFirebaseAuth())
       },
-      recheckStaff: async () => {
-        // Honours the mock flag so "Check again" tells the truth in mock mode.
-        if (useMockData) return mockIsStaff
-        if (!user) return false
-        setError(null)
-        try {
-          const staff = await resolveStaff(user.uid)
-          setIsStaff(staff)
-          return staff
-        } catch (err) {
-          setError(
-            err instanceof Error ? err.message : 'Could not verify staff access',
-          )
-          return false
-        }
-      },
     }),
-    [user, isStaff, loading, error],
+    [user, profile, loading, error],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

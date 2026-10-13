@@ -18,11 +18,10 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  final _name = TextEditingController();
   final _cloudName = TextEditingController();
   final _uploadPreset = TextEditingController();
-  bool _nameReady = false;
   bool _syncing = false;
+  bool _signingOut = false;
 
   @override
   void initState() {
@@ -43,7 +42,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   void dispose() {
-    _name.dispose();
     _cloudName.dispose();
     _uploadPreset.dispose();
     super.dispose();
@@ -53,21 +51,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  Future<void> _saveName() async {
-    final profile = ref.read(profileProvider).valueOrNull;
-    if (profile == null) return;
-    final name = _name.text.trim();
-    if (name.isEmpty) {
-      _name.text = profile.displayName;
-      return;
-    }
-    profile.displayName = name;
-    await ref.read(userRepositoryProvider).save(profile);
-    if (!mounted) return;
-    FocusScope.of(context).unfocus();
-    _toast('Name saved.');
   }
 
   Future<void> _savePhotoSettings() async {
@@ -108,10 +91,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final reports = ref.watch(reportsProvider).valueOrNull ?? const <Report>[];
     final online = ref.watch(isOnlineProvider);
     final themeMode = ref.watch(themeModeProvider);
-    if (profile != null && !_nameReady) {
-      _name.text = profile.displayName;
-      _nameReady = true;
-    }
+    final account = ref.watch(authUserProvider).valueOrNull;
     final matrix = ref.watch(evaluationExportProvider).matrix(reports);
     final displayName = (profile?.displayName.trim().isNotEmpty ?? false)
         ? profile!.displayName.trim()
@@ -152,29 +132,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ],
                 ),
               ),
-            ),
-            GroupedSection(
-              header: 'Name',
-              footer: 'Stored on this device and attached to your reports.',
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-                  child: TextField(
-                    controller: _name,
-                    textCapitalization: TextCapitalization.words,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _saveName(),
-                    decoration: const InputDecoration(
-                      labelText: 'Display name',
-                    ),
-                  ),
-                ),
-                GroupedRow(
-                  title: 'Save name',
-                  accent: true,
-                  onTap: profile == null ? null : _saveName,
-                ),
-              ],
             ),
             GroupedSection(
               dividerIndent: 60,
@@ -330,6 +287,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ],
             ),
             GroupedSection(
+              header: 'Account',
+              children: [
+                GroupedRow(
+                  title: account == null ? 'Account' : '@${account.username}',
+                  subtitle: account?.displayName,
+                  value: account == null
+                      ? null
+                      : account.isAdmin
+                      ? 'Admin'
+                      : 'Staff',
+                ),
+                GroupedRow(
+                  title: 'Sign out',
+                  destructive: true,
+                  onTap: _signingOut ? null : _signOut,
+                ),
+              ],
+            ),
+            GroupedSection(
               header: 'About',
               children: [
                 GroupedRow(title: 'Device ID', subtitle: profile?.id ?? '—'),
@@ -339,6 +315,45 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
       ],
     );
+  }
+
+  Future<void> _signOut() async {
+    final auth = ref.read(authServiceProvider);
+    final unsynced = await auth.unsyncedReportCount();
+    if (!mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sign out?'),
+        content: Text(
+          unsynced == 0
+              ? 'You can sign back in with your username and password.'
+              : '$unsynced ${unsynced == 1 ? 'report hasn’t' : 'reports haven’t'} '
+                    'synced yet. They stay on this phone and sync when you '
+                    'sign back in with the same account. Signing in with a '
+                    'different account removes them.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Sign out'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _signingOut = true);
+    try {
+      await auth.signOut();
+    } catch (_) {
+      if (mounted) _toast('Couldn’t sign out. Try again.');
+    } finally {
+      if (mounted) setState(() => _signingOut = false);
+    }
   }
 
   static String _modeLabel(ThemeMode mode) => switch (mode) {

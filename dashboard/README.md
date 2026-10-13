@@ -12,30 +12,43 @@ npm install
 npm run dev
 ```
 
-Open the printed local URL. Sign in with an authorized staff account.
+Open the printed local URL and sign in with an admin username and password.
 
-## Staff access
+## Accounts
 
-Create a Firestore document `staff/{uid}` for each dashboard user (Console, `tool/add_staff.js`, or Admin SDK). Until that exists, sign-in lands on Access denied.
+Everyone signs in with a **username and password**. Behind the scenes each
+username is a Firebase Auth email/password account at `<username>@arid.local`
+(no mail is sent there). The account's details, role, and status live in
+Firestore `users/{uid}`.
+
+- **Admins** use this dashboard. There is no registration here: admins are
+  created only with `tool/create_admin.js`.
+- **Staff** register on the mobile app with their first, middle (optional),
+  and last name, birthday (15 or older), username, and password. They start
+  **Pending** and cannot sign in until an admin verifies them in the
+  **User Verification** tab.
+
+In User Verification an admin can **Verify** or **Reject** a pending request,
+**Revoke** a verified account (it becomes Rejected), and **Delete** a rejected
+request. Someone whose request was deleted can register again with the same
+username and password. `firebase/firestore.rules` enforces all of this, so it
+cannot be bypassed through the API.
+
+Create another admin, or recover access if none is left, from the repo root
+after `firebase login`:
 
 ```bash
-# From repo root, after firebase login:
-node tool/add_staff.js <uid> [email] [displayName]
+node tool/create_admin.js <username> "<Display name>" [password]
 ```
 
-### Viewing the access-denied page
+### Viewing the access page
 
-With mock data the signed-in user is staff, so `/denied` redirects to the
-dashboard. To work on that page, simulate a non-staff account:
+`/denied` is shown when a signed-in account loses access mid-session (an admin
+revoked it). With mock data, simulate that with:
 
 ```bash
 VITE_MOCK_STAFF=false npm run dev
 ```
-
-Then open `/denied`. Same for `/login`, which also redirects while a mock staff
-session is active.
-
-Enable Google sign-in in Firebase Auth.
 
 ## Deploy
 

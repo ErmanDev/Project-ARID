@@ -23,7 +23,7 @@ type MockReportRow = {
 
 type MockFile = {
   version: number
-  users: UserProfile[]
+  users: Pick<UserProfile, 'id' | 'displayName' | 'totalPoints' | 'reportCount' | 'verifiedPoints'>[]
   reports: MockReportRow[]
 }
 
@@ -33,7 +33,24 @@ function hoursAgo(hours: number): string {
   return new Date(Date.now() - hours * 60 * 60 * 1000).toISOString()
 }
 
-export const MOCK_USERS: UserProfile[] = file.users
+// The shared mock file predates accounts, so every sample user is a verified
+// staff member named after their id.
+export const MOCK_USERS: UserProfile[] = file.users.map((user) => {
+  const [firstName = user.displayName, ...rest] = user.displayName.split(' ')
+  return {
+    ...user,
+    username: user.id.replace(/^mock-user-/, ''),
+    firstName,
+    middleName: '',
+    lastName: rest.join(' '),
+    birthDate: '1995-06-15',
+    role: 'staff',
+    status: 'verified',
+    createdAt: null,
+    reviewedAt: null,
+    reviewedBy: null,
+  }
+})
 
 function normalizeRiskLevel(level: string): Report['riskLevel'] {
   if (level === 'red' || level === 'yellow') return level

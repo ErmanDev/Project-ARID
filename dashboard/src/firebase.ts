@@ -1,5 +1,5 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app'
-import { getAuth, GoogleAuthProvider, type Auth } from 'firebase/auth'
+import { getAuth, type Auth } from 'firebase/auth'
 import { getFirestore, type Firestore } from 'firebase/firestore'
 
 const config = {
@@ -24,8 +24,6 @@ if (firebaseConfigured) {
   db = getFirestore(app)
 }
 
-export const googleProvider = new GoogleAuthProvider()
-
 export function getFirebaseAuth(): Auth {
   if (!auth) throw new Error('Firebase is not configured')
   return auth
@@ -35,6 +33,3 @@ export function getDb(): Firestore {
   if (!db) throw new Error('Firebase is not configured')
   return db
 }
-
-/** @deprecated Staff access is always verified against Firestore `staff/{uid}`. */
-export const allowAnyAuth = false
