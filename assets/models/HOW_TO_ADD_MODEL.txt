@@ -2,7 +2,6 @@ The on-device detector is:
 
   medsam_yolov5s.onnx
 
-It must be identical to dashboard/public/models/medsam_yolov5s.onnx (YOLOv5s,
-640x640 input, opset 12, classes: Bottle, Coconut-Exocarp, Drain-Inlet, Tire,
-Vase). When retraining, export with tool/arid_yolov5_v2_colab.ipynb and copy
-the new .onnx to both places.
+YOLOv5s, 640x640 input, opset 12, classes: Bottle, Coconut-Exocarp,
+Drain-Inlet, Tire, Vase. When retraining, export with
+tool/arid_yolov5_v2_colab.ipynb and replace this file.

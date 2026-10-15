@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
 import { areaById, DEFAULT_AREA_ID, inArea } from '../areas'
 import { useAuth } from '../auth'
 import { FilterBar } from '../components/FilterBar'
 import { buildHotspots } from '../components/HotspotLayer'
-import { IconInfo, IconOffline, IconPin, IconScan } from '../components/icons'
+import { IconInfo, IconOffline, IconPin } from '../components/icons'
 import { Leaderboard } from '../components/Leaderboard'
 import { LiveMap } from '../components/LiveMap'
 import { ReportDetail } from '../components/ReportDetail'
 import { StatsPanel, StatsPanelSkeleton } from '../components/StatsPanel'
-import { Alert, buttonClasses, EmptyState, SectionHeading, Skeleton } from '../components/ui'
+import { Alert, EmptyState, SectionHeading, Skeleton } from '../components/ui'
 import { AppHeader } from '../components/AppHeader'
 import { formatAgo } from '../format'
 import { useOnline, useReports, useUsers } from '../hooks'
@@ -161,7 +161,6 @@ export function MonitorPage() {
           <h1>Small observations. Meaningful action.</h1>
           <p>Explore reports, spot patterns, and know where to look next.</p>
         </div>
-        <Link to="/analyze" className={buttonClasses('primary')}><IconScan size={17} />Analyze a photo</Link>
       </div>
 
       {useMockData || !online || error || outOfScopeCount > 0 ? (

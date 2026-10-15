@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { useMockData } from '../config'
 import { useUsers } from '../hooks'
-import { IconPin, IconScan, IconUsers } from './icons'
+import { IconPin, IconUsers } from './icons'
 import { ThemeToggle } from './ThemeToggle'
 import { Button } from './ui'
 
@@ -20,7 +20,6 @@ export function AppHeader({ status }: { status?: ReactNode }) {
       </NavLink>
       <nav className="app-nav" aria-label="Main navigation">
         <NavLink to="/" end><IconPin size={17} />Monitor</NavLink>
-        <NavLink to="/analyze"><IconScan size={17} />Analyze</NavLink>
         <NavLink to="/users">
           <IconUsers size={17} />
           <span><span className="nav-label-extra">User </span>Verification</span>

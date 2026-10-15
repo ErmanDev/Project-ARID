@@ -287,7 +287,7 @@ export function UsersPage() {
         tabIndex={-1}
         className="mx-auto flex w-full max-w-[1100px] flex-1 flex-col gap-4 px-4 py-4 lg:px-8"
       >
-        <div className="analyze-heading">
+        <div className="page-intro">
           <div className="min-w-0">
             <h1>User Verification</h1>
             <p>

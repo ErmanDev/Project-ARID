@@ -19,16 +19,15 @@ On a fresh checkout, copy `lib/config/local_secrets.example.dart` to
 
 ## Breeding-container detector
 
-The app runs the same YOLOv5s detector as the web dashboard, fully on device:
+The app runs a YOLOv5s detector fully on device:
 
 `assets/models/medsam_yolov5s.onnx`
 
 It detects five potential breeding-container classes (Bottle, Coconut-Exocarp,
 Drain-Inlet, Tire, Vase). A photo is reported as a possible breeding site when
-at least one container is found. Keep this file identical to
-`dashboard/public/models/medsam_yolov5s.onnx` so both surfaces agree. If the
-model fails to load, a deterministic fallback still produces local reports so
-the rest of the pipeline can be tested offline.
+at least one container is found. If the model fails to load, a deterministic
+fallback still produces local reports so the rest of the pipeline can be tested
+offline.
 
 ## Firebase + Cloudinary (free)
 
